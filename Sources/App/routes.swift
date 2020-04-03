@@ -27,20 +27,20 @@ public func routes(_ router: Router) throws {
             try cleanupGeneratedCode()
         } catch GenerationError.failedToGenerateClientCode {
             _ = say(someWord: "Failed to build client")
-            throw GenerationError.failedToGenerateClientCode
+            return "Failed to build client"
         } catch GenerationError.failedToMoveGeneratedCode {
             _ = say(someWord: "Failed to move client code")
-            throw GenerationError.failedToMoveGeneratedCode
+            return "Failed to move client code"
         } catch GenerationError.failedToRemoveArtifacts(let file) {
             _ = say(someWord: "Failed to remove code gen build artifacts. \(file)")
-            throw GenerationError.failedToRemoveArtifacts(file)
+            return  "Failed to remove code gen build artifacts. \(file)"
         } catch {
             _ = say(someWord: "Unexpected Error")
             throw error
         }
-        _ = say(someWord: "Successfully built client")
+        _ = say(someWord: "Successfully built client!")
 
-        return "It works!"
+        return "Successfully built client!"
     }
 
 
