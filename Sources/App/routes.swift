@@ -3,6 +3,12 @@ import Foundation
 
 private let pathToGeneratedCode = "/tmp/generatedCode"
 
+
+struct GenerationResponse: Content {
+    var status: Bool
+    var localizedString: String
+}
+
 enum GenerationError: Error {
     case failedToCreateDirectory
     case failedToGenerateClientCode
@@ -12,7 +18,7 @@ enum GenerationError: Error {
 /// Register your application's routes here.
 public func routes(_ router: Router) throws {
     // Basic "It works" example
-    router.get { req -> String in
+    router.get { req -> GenerationResponse in
         do {
             try makeCodeDirectory()
         } catch {
@@ -27,20 +33,20 @@ public func routes(_ router: Router) throws {
             try cleanupGeneratedCode()
         } catch GenerationError.failedToGenerateClientCode {
             _ = say(someWord: "Failed to build client")
-            return "Failed to build client"
+            return GenerationResponse(status: false, localizedString: "Failed to build client")
         } catch GenerationError.failedToMoveGeneratedCode {
             _ = say(someWord: "Failed to move client code")
-            return "Failed to move client code"
+            return GenerationResponse(status: false, localizedString: "Failed to move client code")
         } catch GenerationError.failedToRemoveArtifacts(let file) {
             _ = say(someWord: "Failed to remove code gen build artifacts. \(file)")
-            return  "Failed to remove code gen build artifacts. \(file)"
+            return GenerationResponse(status: false, localizedString: "Failed to remove code gen build artifacts. \(file)")
         } catch {
             _ = say(someWord: "Unexpected Error")
             throw error
         }
         _ = say(someWord: "Successfully built client!")
 
-        return "Successfully built client!"
+        return GenerationResponse(status: true, localizedString: "Successfully built client!")
     }
 
 
