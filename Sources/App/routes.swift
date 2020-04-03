@@ -3,10 +3,30 @@ import Foundation
 
 private let pathToGeneratedCode = "/tmp/generatedCode"
 
-
 struct GenerationResponse: Content {
     var status: Bool
     var localizedString: String
+}
+
+struct WebhookRequest: Content {
+    var path: String
+    var action: String
+}
+
+extension WebhookRequest {
+    func owner() -> String {
+        // Seems dangerous to return an indexed value
+        return path.components(separatedBy: "/")[2]
+    }
+    func repo() -> String {
+        // Seems dangerous to return an indexed value
+        return path.components(separatedBy: "/")[3]
+    }
+
+    func version() -> String {
+        // Seems dangerous to return an indexed value
+        return path.components(separatedBy: "/")[4]
+    }
 }
 
 enum GenerationError: Error {
@@ -14,35 +34,40 @@ enum GenerationError: Error {
     case failedToGenerateClientCode
     case failedToMoveGeneratedCode
     case failedToRemoveArtifacts(String)
+
+    var localizedDescription: String {
+        switch self {
+
+        case .failedToCreateDirectory:
+            return "Failed to create temp directory"
+        case .failedToGenerateClientCode:
+            return "Failed to build client"
+        case .failedToMoveGeneratedCode:
+            return "Failed to move client code"
+        case .failedToRemoveArtifacts(let file):
+            return "Failed to remove code gen build artifacts. \(file)"
+        }
+    }
 }
+
 /// Register your application's routes here.
 public func routes(_ router: Router) throws {
     // Basic "It works" example
     router.post { req -> GenerationResponse in
-        do {
-            try makeCodeDirectory()
-        } catch {
-            print("failed to create the directory, not a big deal")
-        }
-        let owner = "Thumbworks"
-        let repo = "DeckOfCards"
-        let version = "1.0.0"
+
         let language = "swift5"
+
+        let content = parseRequestJson(rawRequestContent: req.content)
+
+        // Step 1: Make the tmp directory and fail silently
+
+        try? makeCodeDirectory()
         do {
-            try generateClient(owner: owner, repo: repo, version: version, language: language)
+            try generateClient(owner: content.owner(), repo: content.repo(), version: content.version(), language: language)
             try cleanupGeneratedCode()
-        } catch GenerationError.failedToGenerateClientCode {
-            _ = say(someWord: "Failed to build client")
-            return GenerationResponse(status: false, localizedString: "Failed to build client")
-        } catch GenerationError.failedToMoveGeneratedCode {
-            _ = say(someWord: "Failed to move client code")
-            return GenerationResponse(status: false, localizedString: "Failed to move client code")
-        } catch GenerationError.failedToRemoveArtifacts(let file) {
-            _ = say(someWord: "Failed to remove code gen build artifacts. \(file)")
-            return GenerationResponse(status: false, localizedString: "Failed to remove code gen build artifacts. \(file)")
         } catch {
-            _ = say(someWord: "Unexpected Error")
-            throw error
+            _ = say(someWord: error.localizedDescription)
+            return GenerationResponse(status: false, localizedString: error.localizedDescription)
         }
         _ = say(someWord: "Successfully built client!")
 
@@ -57,6 +82,30 @@ public func routes(_ router: Router) throws {
     router.delete("todos", Todo.parameter, use: todoController.delete)
 }
 
+/**
+  Parse the request content
+
+ {
+ "path": "/apis/username/api-name/1.1",
+ "action": "after_api_version_saved",
+ "definition": {
+ "swagger": "2.0",
+ "info": {
+ "description": "This is a sample Petstore server ...",
+ "version": "1.1",
+ "title": "Swagger Petstore"
+ },
+ "host": "petstore.swagger.io",
+ ...
+ **/
+private func parseRequestJson(rawRequestContent: ContentContainer<Request>) -> WebhookRequest {
+    var content: WebhookRequest = WebhookRequest(path: "", action: "")
+    _ = try? rawRequestContent.decode(WebhookRequest.self).map(to: HTTPStatus.self) { webhookRequest in
+        content = webhookRequest
+        return .ok
+    }
+    return content
+}
 /// mv /tmp/generatedCode/SwaggerClient/Classes/Swaggers/* /tmp/generatedCode/
 private func cleanupGeneratedCode() throws {
     guard shell("cp", "-r", "\(pathToGeneratedCode)/SwaggerClient/Classes/Swaggers/", "\(pathToGeneratedCode)/") == 0 else {
