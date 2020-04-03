@@ -20,4 +20,19 @@
 </p>
 
 
-### 
+### What is this?
+
+This is a service which attempts to do the following: 
+
+1. Make a directory in /tmp
+2. Generate a webservice client using a remote yaml file defining a [Deck of Cards webservice](https://deckofcardsapi.com)
+3. Push the webservice client to a repo 
+4. Expose the client via [Swift Package Manager](https://swift.org/package-manager/)
+
+### Current status
+
+1. The generation process works locally
+2. When deployed to Heroku, there is no installed binary `swagger-codegen` so the system falls apart.
+
+### TODO:
+Figure out how to install the codegen, or fire up a [docker instance](https://github.com/swagger-api/swagger-codegen#docker)
