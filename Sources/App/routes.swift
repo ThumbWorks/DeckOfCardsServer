@@ -1,9 +1,18 @@
 import Vapor
 import Foundation
+let ENV: [String:String] = ["GH_BASIC_CLIENT_ID" : "abc",
+                            "GH_BASIC_SECRET_ID" : "abc"]
+private let CLIENT_ID = ENV["GH_BASIC_CLIENT_ID"]
+private let CLIENT_SECRET = ENV["GH_BASIC_SECRET_ID"]
 
 // TODO we need to get a proper path in the form of something like /tmp/generatedCode/githubUser/reponame/language
 private let pathToGeneratedCode = "/tmp/generatedCode"
 private let generatorServiceHost = "generator3.swagger.io"
+
+struct OAuthResponse: Content {
+    var status: Bool
+    var localizedString: String
+}
 
 struct GenerationResponse: Content {
     var status: Bool
@@ -57,6 +66,10 @@ enum GenerationError: Error {
 
 /// Register your application's routes here.
 public func routes(_ router: Router) throws {
+    router.get("/oauth") { req -> OAuthResponse in
+        return OAuthResponse(status: true, localizedString: "success")
+    }
+
     // Basic "It works" example
     router.post { req -> GenerationResponse in
         let content = parseRequestJson(rawRequestContent: req.content)
@@ -73,10 +86,10 @@ public func routes(_ router: Router) throws {
 
 
     // Example of configuring a controller
-    let todoController = TodoController()
-    router.get("todos", use: todoController.index)
-    router.post("todos", use: todoController.create)
-    router.delete("todos", Todo.parameter, use: todoController.delete)
+    let userController = UserController()
+    router.get("users", use: userController.index)
+    router.post("users", use: userController.create)
+    router.delete("users", User.parameter, use: userController.delete)
 }
 
 /**
