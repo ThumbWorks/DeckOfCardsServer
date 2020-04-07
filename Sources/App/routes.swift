@@ -1,9 +1,6 @@
 import Vapor
 import Foundation
-let ENV: [String:String] = ["GH_BASIC_CLIENT_ID" : "abc",
-                            "GH_BASIC_SECRET_ID" : "abc"]
-private let CLIENT_ID = ENV["GH_BASIC_CLIENT_ID"]
-private let CLIENT_SECRET = ENV["GH_BASIC_SECRET_ID"]
+import Leaf
 
 // TODO we need to get a proper path in the form of something like /tmp/generatedCode/githubUser/reponame/language
 private let pathToGeneratedCode = "/tmp/generatedCode"
@@ -66,10 +63,6 @@ enum GenerationError: Error {
 
 /// Register your application's routes here.
 public func routes(_ router: Router) throws {
-    router.get("/oauth") { req -> OAuthResponse in
-        return OAuthResponse(status: true, localizedString: "success")
-    }
-
     // Basic "It works" example
     router.post { req -> GenerationResponse in
         let content = parseRequestJson(rawRequestContent: req.content)
@@ -90,6 +83,10 @@ public func routes(_ router: Router) throws {
     router.get("users", use: userController.index)
     router.post("users", use: userController.create)
     router.delete("users", User.parameter, use: userController.delete)
+
+    let githubOAuthController = GithubOAuthController()
+    router.get("login", use: githubOAuthController.login)
+    router.get("callback", use: githubOAuthController.callback)
 }
 
 /**
