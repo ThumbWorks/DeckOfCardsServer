@@ -127,7 +127,6 @@ final class GeneratedCodeFetchController {
             try? self.cleanupGeneratedCode()
             // TODO Add the github integration here
         }
-        return
     }
 
 

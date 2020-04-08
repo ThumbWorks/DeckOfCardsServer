@@ -16,6 +16,6 @@ public func routes(_ router: Router) throws {
 
     let githubOAuthController = GithubOAuthController()
     router.get("login", use: githubOAuthController.login)
-    router.get("callback", use: githubOAuthController.callback)
+    router.get("oauth/redirect", use: githubOAuthController.callback)
 }
 
