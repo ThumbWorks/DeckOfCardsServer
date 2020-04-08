@@ -14,7 +14,10 @@ public func routes(_ router: Router) throws {
     router.post("users", use: userController.create)
     router.delete("users", User.parameter, use: userController.delete)
 
-    let githubOAuthController = GithubOAuthController()
+
+    guard let clientID = Environment.get("github_app_client_id"),
+        let clientSecret = Environment.get("github_app_client_secret") else { fatalError() }
+    let githubOAuthController = GithubOAuthController(clientID: clientID, clientSecret: clientSecret)
     router.get("login", use: githubOAuthController.login)
     router.get("oauth/redirect", use: githubOAuthController.callback)
 }
