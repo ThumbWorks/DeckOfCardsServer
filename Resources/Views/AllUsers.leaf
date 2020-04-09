@@ -1,0 +1,18 @@
+
+<html>
+  <head>
+  </head>
+  <body>
+    <p>
+      These are all of the users
+    </p>
+
+<ul>
+#for(user in allUsers) {
+<li> #(user.name) #(user.email)</li>
+}
+</ul>
+cool
+
+  </body>
+</html>

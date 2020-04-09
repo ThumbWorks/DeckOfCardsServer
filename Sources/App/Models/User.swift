@@ -13,13 +13,15 @@ final class User: SQLiteModel, Codable {
     /// The unique identifier for this `User`.
     var id: Int?
 
-    /// A title describing what this `User` entails.
     var name: String
+    var email: String
+    var githubAccesToken: String?
 
     /// Creates a new `User`.
-    init(id: Int?, name: String) {
+    init(id: Int?, name: String, email: String) {
         self.id = id
         self.name = name
+        self.email = email
     }
 }
 

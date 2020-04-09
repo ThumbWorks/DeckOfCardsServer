@@ -3,8 +3,11 @@ import Vapor
 /// Controls basic CRUD operations on `user`s.
 final class UserController {
     /// Returns a list of all `user`s.
-    func index(_ req: Request) throws -> Future<[User]> {
-        return User.query(on: req).all()
+    func index(_ req: Request) throws -> Future<View> {
+        let rod =  User(id: 1, name: "Rod", email: "roderic@thumbworks.io")
+        let bob = User(id: 2, name: "Bob", email: "bob@thumbworks.io")
+        return try req.view().render("AllUsers", ["allUsers" : [rod, bob]])
+//        return User.query(on: req).all()
     }
 
     /// Saves a decoded `user` to the database.
