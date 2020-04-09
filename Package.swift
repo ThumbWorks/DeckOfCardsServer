@@ -15,8 +15,8 @@ let package = Package(
 
         // 🔵 Swift ORM (queries, models, relations, etc) built on SQLite 3.
         .package(url: "https://github.com/vapor/fluent-sqlite.git", from: "3.0.0"),
-
-        // 🔒 Some basic auth requirements
+        
+        // 👤 Authentication and Authorization framework for Fluent.
         .package(url: "https://github.com/vapor/auth.git", from: "2.0.0"),
 
     ],

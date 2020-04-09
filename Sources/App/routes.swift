@@ -1,3 +1,4 @@
+import Authentication
 import Vapor
 import Foundation
 import Leaf
@@ -20,5 +21,11 @@ public func routes(_ router: Router) throws {
     let githubOAuthController = GithubOAuthController(clientID: clientID, clientSecret: clientSecret)
     router.get("login", use: githubOAuthController.login)
     router.get("oauth/redirect", use: githubOAuthController.callback)
+
+    // Use user model to create an authentication middleware
+    let token = User.tokenAuthMiddleware()
+
+    // Create a route closure wrapped by this middleware
+    router.grouped(token).get("hello", use: userController.hello)
 }
 

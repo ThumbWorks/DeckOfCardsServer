@@ -23,4 +23,10 @@ final class UserController {
             return user.delete(on: req)
         }.transform(to: .ok)
     }
+
+    func hello(_ req: Request) throws -> Future<HTTPStatus> {
+        let user = try req.requireAuthenticated(User.self)
+        print( "Hello, \(user.name).")
+        return req.future(HTTPStatus.ok)
+    }
 }

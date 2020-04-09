@@ -7,14 +7,90 @@
 
 import Vapor
 
-
-
-private let githubHost = "https://github.com"
+private let githubHost = "github.com"
 private let postPath = "/login/oauth/access_token"
-private let getUserPath = "/login/oauth/access_token"
+private let getUserPath = "/user"
 
 struct GithubCallbackRequest: Content {
     var code: String
+}
+
+struct GithubPlan: Content {
+    let name: String
+    let space: Int
+    let collaborators: Int
+    let privateRepos: Int
+    enum CodingKeys: String, CodingKey {
+        case name, space, collaborators
+        case privateRepos = "private_repos"
+    }
+}
+struct UserResponse: Content {
+    let login: String
+    let id: Int
+    let nodeID: String
+    let avatarURL: URL
+    let gravatarID: String
+    let url: URL
+    let htmlURL: URL
+    let followersURL: URL
+    let followingURLString: String
+    let gistsURLString: String
+    let starredURLString: String
+    let subscriptionsURL: URL
+    let organizationsURL: URL
+    let reposURL: URL
+    let eventsURLString: String
+    let receivedEventsURL: URL
+    let type: String
+    let siteAdmin: Bool
+    let name: String
+    let company: String
+    let blog: String
+    let location: String
+    let email: String
+    let bio: String?
+    let hireable: String?
+    let publicRepos: Int
+    let publicGists: Int
+    let followers: Int
+    let following: Int
+    let createdAt: Date
+    let updatedAt: Date
+    let privateGists: Int
+    let totalPrivateRepos: Int
+    let ownedPrivateRepos: Int
+    let diskUsage: Int
+    let collaborators: Int
+    let twoFactorAuthentication: Bool
+    let plan: GithubPlan
+    enum CodingKeys: String, CodingKey {
+        case nodeID = "node_id"
+        case avatarURL = "avatar_url"
+        case gravatarID = "gravatar_id"
+        case htmlURL = "html_url"
+        case followersURL = "followers_url"
+        case followingURLString = "following_url"
+        case gistsURLString = "gists_url"
+        case starredURLString = "starred_url"
+        case subscriptionsURL = "subscriptions_url"
+        case organizationsURL = "organizations_url"
+        case reposURL = "repos_url"
+        case eventsURLString = "events_url"
+        case receivedEventsURL = "received_events_url"
+        case siteAdmin = "site_admin"
+        case publicRepos = "public_repos"
+        case publicGists = "public_gists"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case privateGists = "private_gists"
+        case totalPrivateRepos = "total_private_repos"
+        case ownedPrivateRepos = "owned_private_repos"
+        case diskUsage = "disk_usage"
+        case twoFactorAuthentication = "two_factor_authentication"
+        case name, company, blog, location, url, id, login, type, hireable, bio, email, followers, following, collaborators, plan
+
+    }
 }
 
 struct GithubAuthTokenResponse: Content {
@@ -53,7 +129,7 @@ final class GithubOAuthController {
     }
 
     private func buildCodeForAccessTokenExchangeRequest(with code: String) -> HTTPRequest {
-        let urlToPost = "\(githubHost)\(postPath)?code=\(code)"
+        let urlToPost = "https://\(githubHost)\(postPath)?code=\(code)"
         var request =  HTTPRequest(method: .POST, url: urlToPost)
         request.headers.basicAuthorization = BasicAuthorization(username: clientID, password: clientSecret)
         request.headers.add(name: HTTPHeaderName.accept, value: "application/json")
@@ -71,7 +147,13 @@ final class GithubOAuthController {
         _ = responseFuture.map { response -> (Void) in
             let status =  try response.content.decode(GithubAuthTokenResponse.self).map(to: HTTPStatus.self) { tokenResponse in
                 try req.session()["accessToken"] = tokenResponse.accessToken
-                try self.getUser(on: req)
+                let user = User(id: 1, name: "Rod with an Access Token", email: "access token email")
+                user.githubAccesToken = tokenResponse.accessToken
+                let _ = user.save(on: req).map { user  in
+                    try req.authenticate(user)
+                    try self.getUser(on: req)
+                }
+
                 return .ok
             }
             print(status)
@@ -79,7 +161,7 @@ final class GithubOAuthController {
     }
 
     private func buildGetUserRequest(with accessToken: String) -> HTTPRequest {
-        let urlToPost = "\(githubHost)\(getUserPath)"
+        let urlToPost = "https://api.\(githubHost)\(getUserPath)"
         var request =  HTTPRequest(method: .GET, url: urlToPost)
         request.headers.add(name: .authorization, value: "token \(accessToken)")
         request.headers.add(name: HTTPHeaderName.accept, value: "application/json")
@@ -96,13 +178,12 @@ final class GithubOAuthController {
             print("we got an error \(error)")
         }
         _ = responseFuture.map { response -> (Void) in
-            if let data = response.http.body.data {
-                // TODO I need to parse this with an actual response object
-                let json = try? JSONSerialization.jsonObject(with: data, options: .allowFragments)
-                // Oh wait we should be able to use encodables for this
-                if let object = json as? [String: String] {
-                    print(object)
-                }
+            do {
+                let _ =  try response.content.decode(UserResponse.self).map(to: Void.self) { userResponse in
+                    print(userResponse)
+                }.catch({ (error) in
+                    print("error parsing \(error)")
+                })
             }
         }
     }
