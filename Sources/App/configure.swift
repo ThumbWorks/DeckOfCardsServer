@@ -19,7 +19,11 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     var middlewares = MiddlewareConfig() // Create _empty_ middleware config
     // middlewares.use(FileMiddleware.self) // Serves files from `Public/` directory
     middlewares.use(ErrorMiddleware.self) // Catches errors and converts to HTTP response
+
+    // Session middleware
+    middlewares.use(SessionsMiddleware.self)
     services.register(middlewares)
+    config.prefer(MemoryKeyedCache.self, for: KeyedCache.self)
 
     // Configure a SQLite database
     let sqlite = try SQLiteDatabase(storage: .memory)
