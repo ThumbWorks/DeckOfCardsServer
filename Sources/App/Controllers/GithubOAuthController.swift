@@ -25,45 +25,25 @@ struct GithubPlan: Content {
         case privateRepos = "private_repos"
     }
 }
+
 struct UserResponse: Content {
-    let login: String
-    let id: Int
-    let nodeID: String
-    let avatarURL: URL
-    let gravatarID: String
-    let url: URL
-    let htmlURL: URL
-    let followersURL: URL
-    let followingURLString: String
-    let gistsURLString: String
-    let starredURLString: String
-    let subscriptionsURL: URL
-    let organizationsURL: URL
-    let reposURL: URL
-    let eventsURLString: String
-    let receivedEventsURL: URL
-    let type: String
-    let siteAdmin: Bool
-    let name: String
-    let company: String
-    let blog: String
-    let location: String
-    let email: String
-    let bio: String?
-    let hireable: String?
-    let publicRepos: Int
-    let publicGists: Int
-    let followers: Int
-    let following: Int
-    let createdAt: Date
-    let updatedAt: Date
-    let privateGists: Int
-    let totalPrivateRepos: Int
-    let ownedPrivateRepos: Int
-    let diskUsage: Int
-    let collaborators: Int
-    let twoFactorAuthentication: Bool
+    let login, nodeID, gravatarID, followingURLString, gistsURLString,
+    starredURLString, eventsURLString, type, name, company, blog, location, email: String
+
+    let publicRepos, followers, following, publicGists, totalPrivateRepos,
+    ownedPrivateRepos, collaborators, diskUsage, privateGists, id: Int
+
+    let avatarURL, url, htmlURL, followersURL, reposURL,
+    subscriptionsURL, organizationsURL, receivedEventsURL: URL
+
+    let siteAdmin, twoFactorAuthentication: Bool
+
+    let bio, hireable: String?
+
+    let createdAt, updatedAt: Date
+
     let plan: GithubPlan
+
     enum CodingKeys: String, CodingKey {
         case nodeID = "node_id"
         case avatarURL = "avatar_url"
@@ -147,13 +127,7 @@ final class GithubOAuthController {
         _ = responseFuture.map { response -> (Void) in
             let status =  try response.content.decode(GithubAuthTokenResponse.self).map(to: HTTPStatus.self) { tokenResponse in
                 try req.session()["accessToken"] = tokenResponse.accessToken
-                let user = User(id: 1, name: "Rod with an Access Token", email: "access token email")
-                user.githubAccesToken = tokenResponse.accessToken
-                let _ = user.save(on: req).map { user  in
-                    try req.authenticate(user)
-                    try self.getUser(on: req)
-                }
-
+                try self.getUser(on: req)
                 return .ok
             }
             print(status)
@@ -180,7 +154,12 @@ final class GithubOAuthController {
         _ = responseFuture.map { response -> (Void) in
             do {
                 let _ =  try response.content.decode(UserResponse.self).map(to: Void.self) { userResponse in
-                    print(userResponse)
+                    let user = User(userResponse: userResponse, accessToken: accessToken)
+                    print(user.name)
+                    let saveResponse = user.save(on: req).catch { error in
+                        print("error saving user \(error)")
+                    }
+                    print(saveResponse)
                 }.catch({ (error) in
                     print("error parsing \(error)")
                 })
