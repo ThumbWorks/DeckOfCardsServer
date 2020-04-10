@@ -6,7 +6,7 @@
 //
 
 import Vapor
-
+import FluentPostgreSQL
 private let githubHost = "github.com"
 private let postPath = "/login/oauth/access_token"
 private let getUserPath = "/user"
@@ -145,21 +145,41 @@ final class GithubOAuthController {
     private func getUser(on req: Request) throws {
         let client = try req.client()
         guard let accessToken = try req.session()["accessToken"] else { return }
+
+        // Create the request to fetch the user from github
         let responseFuture = client.get("https://.....") { serverRequest in
             serverRequest.http = buildGetUserRequest(with: accessToken)
         }
+
+        // If it errors
         responseFuture.catch { error in
             print("we got an error \(error)")
         }
+
+        // With the response do this
         _ = responseFuture.map { response -> (Void) in
             do {
-                let _ =  try response.content.decode(UserResponse.self).map(to: Void.self) { userResponse in
-                    let user = User(userResponse: userResponse, accessToken: accessToken)
-                    print(user.name)
-                    let saveResponse = user.save(on: req).catch { error in
-                        print("error saving user \(error)")
+                _ =  try response.content.decode(UserResponse.self).map(to: Void.self) { userResponse in
+                    // With the response, check to see if the user exists in the database
+                    _ = User.query(on: req).filter(\.login == userResponse.login).first().map { user -> Void in
+                        let savableUser: User
+                        if let user = user {
+                            // If yes, update
+                            savableUser = user
+                            savableUser.updateUser(with: userResponse, accessToken: accessToken)
+                        } else {
+                            // If no, create
+                            savableUser = User(userResponse: userResponse,
+                                               accessToken: accessToken)
+
+                        }
+                        savableUser.save(on: req).catch { error in
+                            print("error saving user \(error)")
+                        }.catch { error in
+                            print("error saving \(error)")
+                        }
+                        return
                     }
-                    print(saveResponse)
                 }.catch({ (error) in
                     print("error parsing \(error)")
                 })

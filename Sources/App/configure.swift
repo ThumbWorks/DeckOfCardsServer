@@ -1,4 +1,4 @@
-import FluentSQLite
+import FluentPostgreSQL
 import Vapor
 import Leaf
 import Authentication
@@ -6,8 +6,8 @@ import Authentication
 /// Called before your application initializes.
 public func configure(_ config: inout Config, _ env: inout Environment, _ services: inout Services) throws {
     // Register providers first
-    try services.register(FluentSQLiteProvider())
     try services.register(LeafProvider())
+    try services.register(FluentPostgreSQLProvider())
     config.prefer(LeafRenderer.self, for: ViewRenderer.self)
 
     // Register routes to the router
@@ -25,18 +25,24 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     services.register(middlewares)
     config.prefer(MemoryKeyedCache.self, for: KeyedCache.self)
 
-    // Configure a SQLite database
-    let sqlite = try SQLiteDatabase(storage: .memory)
+    // Configure a PostgreSQL database
 
-    // Register the configured SQLite database to the database config.
+    let pgConfig = PostgreSQLDatabaseConfig(hostname: "localhost",
+                                            port: 5432,
+                                            username: "roderic",
+                                            database: "deleteme",
+                                            password: nil, transport: .cleartext)
+    let pgDatabase = PostgreSQLDatabase(config: pgConfig)
+    
     var databases = DatabasesConfig()
-    databases.add(database: sqlite, as: .sqlite)
+    databases.enableLogging(on: .psql)
+    databases.add(database: pgDatabase, as: .psql)
     services.register(databases)
 
     try services.register(AuthenticationProvider())
 
     // Configure migrations
     var migrations = MigrationConfig()
-    migrations.add(model: User.self, database: .sqlite)
+    migrations.add(model: User.self, database: .psql)
     services.register(migrations)
 }

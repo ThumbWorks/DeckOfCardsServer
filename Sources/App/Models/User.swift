@@ -6,15 +6,14 @@
 //
 
 import Authentication
-import FluentSQLite
+import FluentPostgreSQL
 import Vapor
 
 
 /// A single entry of a User list.
-final class User: SQLiteModel, Codable {
+final class User: PostgreSQLModel, Codable {
     /// The unique identifier for this `User`.
     var id: Int?
-
     var name, location, blog, company, type, email, githubAccessToken, login, nodeID, gravatarID, gistsURLString, starredURLString, eventsURLString, followingURLString: String
     var avatarURL, receivedEventsURL, reposURL, url, htmlURL, subscriptionsURL, organizationsURL, followersURL: URL
     var siteAdmin, twoFactorAuthentication: Bool
@@ -28,8 +27,47 @@ final class User: SQLiteModel, Codable {
            return children(\.userID)
        }
 
+    func updateUser(with userResponse: UserResponse, accessToken: String) {
+        self.name = userResponse.name
+        self.email = userResponse.email
+        self.login = userResponse.login
+        self.nodeID = userResponse.nodeID
+        self.avatarURL = userResponse.avatarURL
+        self.gravatarID = userResponse.gravatarID
+        self.followersURL = userResponse.followersURL
+        self.url = userResponse.url
+        self.htmlURL = userResponse.htmlURL
+        self.location = userResponse.location
+        self.blog = userResponse.blog
+        self.company = userResponse.company
+        self.type = userResponse.type
+        self.starredURLString = userResponse.starredURLString
+        self.gistsURLString = userResponse.gistsURLString
+        self.eventsURLString = userResponse.eventsURLString
+        self.receivedEventsURL = userResponse.receivedEventsURL
+        self.reposURL = userResponse.reposURL
+        self.followingURLString = userResponse.followingURLString
+        self.subscriptionsURL = userResponse.subscriptionsURL
+        self.organizationsURL = userResponse.organizationsURL
+        self.siteAdmin = userResponse.siteAdmin
+        self.bio = userResponse.bio
+        self.hireable = userResponse.hireable
+        self.publicRepos = userResponse.publicRepos
+        self.following = userResponse.following
+        self.followers = userResponse.followers
+        self.publicGists = userResponse.publicGists
+        self.privateGists = userResponse.privateGists
+        self.createdAt = userResponse.createdAt
+        self.updatedAt = userResponse.updatedAt
+        self.totalPrivateRepos = userResponse.totalPrivateRepos
+        self.ownedPrivateRepos = userResponse.ownedPrivateRepos
+        self.diskUsage = userResponse.diskUsage
+        self.collaborators = userResponse.collaborators
+        self.twoFactorAuthentication = userResponse.twoFactorAuthentication
+        self.plan = userResponse.plan
+    }
+
     init(userResponse: UserResponse, accessToken: String) {
-        self.id = userResponse.id
         self.name = userResponse.name
         self.email = userResponse.email
         self.githubAccessToken = accessToken
@@ -71,7 +109,7 @@ final class User: SQLiteModel, Codable {
     }
 }
 
-struct UserToken: SQLiteModel {
+struct UserToken: PostgreSQLModel {
     var id: Int?
     var string: String
     var userID: User.ID
