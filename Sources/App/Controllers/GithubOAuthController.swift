@@ -7,6 +7,7 @@
 
 import Vapor
 import FluentPostgreSQL
+import Authentication
 private let githubHost = "github.com"
 private let postPath = "/login/oauth/access_token"
 private let getUserPath = "/user"
@@ -76,8 +77,8 @@ struct UserResponse: Content {
 struct GithubAuthTokenResponse: Content {
     var accessToken: String
     enum CodingKeys: String, CodingKey {
-          case accessToken = "access_token"
-      }
+        case accessToken = "access_token"
+    }
 }
 
 final class GithubOAuthController {
@@ -92,20 +93,40 @@ final class GithubOAuthController {
         self.clientSecret = clientSecret
     }
     
-    func callback(_ req: Request) throws -> Future<View> {
-        let code = try req.query.decode(GithubCallbackRequest.self).code
 
-        // Do a post to github with the code
-        do {
-            try send(code, on: req)
-        } catch {
-            print("an error occured here, may need to respond by rendering a 500 or something")
-        }
 
-        return try req.view().render("Callback", ENV)
-    }
     func login(_ req: Request) throws -> Future<View> {
         return try req.view().render("Users", ENV)
+    }
+
+    func loginCheck(_ req: Request) throws -> Future<View> {
+        let user = try req.requireAuthenticated(User.self)
+        return try req.view().render("LoggedIn", ["user" : user])
+        // TODO add the redirect middleware
+//        } else {
+//            print("not logged in")
+//            return try login(req)
+//        }
+    }
+
+    func callback(_ req: Request) throws -> Future<String> {
+        let code = try req.query.decode(GithubCallbackRequest.self).code
+
+
+        User.authenticate(sessionID: code.hashValue, on: req).catch { error in
+            print(error)
+        }
+        try send(code, on: req)
+        return try send(code, on: req)
+    }
+
+    private func send(_ code: String, on req: Request) throws -> Future<String> {
+        let client = try req.client()
+        return client.get("https://.....") { serverRequest in
+            serverRequest.http = buildCodeForAccessTokenExchangeRequest(with: code)
+        }.flatMap { response -> EventLoopFuture<String> in
+            return try response.content.decode(GithubAuthTokenResponse.self).flatMap { try self.getGithubUser(with: $0.accessToken, on: req) }
+        }
     }
 
     private func buildCodeForAccessTokenExchangeRequest(with code: String) -> HTTPRequest {
@@ -116,21 +137,40 @@ final class GithubOAuthController {
         return request
     }
 
-    private func send(_ code: String, on req: Request) throws {
+    private func getGithubUser(with accessToken: String, on req: Request) throws -> EventLoopFuture<String> {
         let client = try req.client()
+
+        // Create the request to fetch the user from github
         let responseFuture = client.get("https://.....") { serverRequest in
-            serverRequest.http = buildCodeForAccessTokenExchangeRequest(with: code)
+            serverRequest.http = buildGetUserRequest(with: accessToken)
         }
-        responseFuture.catch { error in
-            print("we got an error \(error)")
-        }
-        _ = responseFuture.map { response -> (Void) in
-            let status =  try response.content.decode(GithubAuthTokenResponse.self).map(to: HTTPStatus.self) { tokenResponse in
-                try req.session()["accessToken"] = tokenResponse.accessToken
-                try self.getUser(on: req)
-                return .ok
+
+        // With the response do this
+        return responseFuture.flatMap { response -> EventLoopFuture<String> in
+            do {
+                let decodedResponse = try response.content.decode(UserResponse.self)
+                return decodedResponse.flatMap { self.queryUser(userResponse: $0, accessToken: accessToken, on: req) }
             }
-            print(status)
+        }
+    }
+
+    private func queryUser(userResponse: UserResponse, accessToken: String, on req: Request) -> EventLoopFuture<String> {
+        return User.query(on: req).filter(\.login == userResponse.login).first().flatMap { user -> EventLoopFuture<String> in
+            let savableUser: User
+            if let user = user {
+                // If yes, update
+                savableUser = user
+                savableUser.updateUser(with: userResponse)
+            } else {
+                // If no, create
+                savableUser = User(userResponse: userResponse)
+            }
+
+            let session = try req.session()
+            print("the session is \(session)")
+            // try req.authenticate(savableUser)
+            try req.authenticateSession(savableUser)
+            return savableUser.save(on: req).flatMap { try self.queryToken(user: $0, accessToken: accessToken, on: req) }
         }
     }
 
@@ -142,49 +182,14 @@ final class GithubOAuthController {
         return request
     }
 
-    private func getUser(on req: Request) throws {
-        let client = try req.client()
-        guard let accessToken = try req.session()["accessToken"] else { return }
-
-        // Create the request to fetch the user from github
-        let responseFuture = client.get("https://.....") { serverRequest in
-            serverRequest.http = buildGetUserRequest(with: accessToken)
-        }
-
-        // If it errors
-        responseFuture.catch { error in
-            print("we got an error \(error)")
-        }
-
-        // With the response do this
-        _ = responseFuture.map { response -> (Void) in
-            do {
-                _ =  try response.content.decode(UserResponse.self).map(to: Void.self) { userResponse in
-                    // With the response, check to see if the user exists in the database
-                    _ = User.query(on: req).filter(\.login == userResponse.login).first().map { user -> Void in
-                        let savableUser: User
-                        if let user = user {
-                            // If yes, update
-                            savableUser = user
-                            savableUser.updateUser(with: userResponse, accessToken: accessToken)
-                        } else {
-                            // If no, create
-                            savableUser = User(userResponse: userResponse,
-                                               accessToken: accessToken)
-
-                        }
-                        savableUser.save(on: req).catch { error in
-                            print("error saving user \(error)")
-                        }.catch { error in
-                            print("error saving \(error)")
-                        }
-                        return
-                    }
-                }.catch({ (error) in
-                    print("error parsing \(error)")
-                })
+    private func queryToken(user: User, accessToken: String, on req: Request) throws -> EventLoopFuture<String> {
+        return try UserToken.query(on: req).filter(\.userID == user.requireID()).first().flatMap { userToken -> EventLoopFuture<String> in
+            var newToken = try UserToken(string: accessToken, userID: user.requireID())
+            newToken.bearerToken = accessToken
+            return newToken.save(on: req).map { token -> (String) in
+                return ".ok"
             }
         }
     }
-
 }
+

@@ -17,10 +17,8 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
 
     // Register middleware
     var middlewares = MiddlewareConfig() // Create _empty_ middleware config
-    // middlewares.use(FileMiddleware.self) // Serves files from `Public/` directory
     middlewares.use(ErrorMiddleware.self) // Catches errors and converts to HTTP response
-
-    // Session middleware
+    middlewares.use(FileMiddleware.self)
     middlewares.use(SessionsMiddleware.self)
     services.register(middlewares)
     config.prefer(MemoryKeyedCache.self, for: KeyedCache.self)
@@ -30,7 +28,7 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     let pgConfig = PostgreSQLDatabaseConfig(hostname: "localhost",
                                             port: 5432,
                                             username: "roderic",
-                                            database: "deleteme",
+                                            database: "deleteme1",
                                             password: nil, transport: .cleartext)
     let pgDatabase = PostgreSQLDatabase(config: pgConfig)
     
@@ -44,5 +42,6 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     // Configure migrations
     var migrations = MigrationConfig()
     migrations.add(model: User.self, database: .psql)
+    migrations.add(model: UserToken.self, database: .psql)
     services.register(migrations)
 }

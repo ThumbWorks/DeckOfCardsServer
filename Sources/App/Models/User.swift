@@ -13,8 +13,9 @@ import Vapor
 /// A single entry of a User list.
 final class User: PostgreSQLModel, Codable {
     /// The unique identifier for this `User`.
+    let githubAccessToken = "remove this column"
     var id: Int?
-    var name, location, blog, company, type, email, githubAccessToken, login, nodeID, gravatarID, gistsURLString, starredURLString, eventsURLString, followingURLString: String
+    var name, location, blog, company, type, email, login, nodeID, gravatarID, gistsURLString, starredURLString, eventsURLString, followingURLString: String
     var avatarURL, receivedEventsURL, reposURL, url, htmlURL, subscriptionsURL, organizationsURL, followersURL: URL
     var siteAdmin, twoFactorAuthentication: Bool
     var bio: String?
@@ -24,10 +25,10 @@ final class User: PostgreSQLModel, Codable {
     var totalPrivateRepos, ownedPrivateRepos, diskUsage, collaborators: Int
     var plan: GithubPlan
     var tokens: Children<User, UserToken> {
-           return children(\.userID)
-       }
+        return children(\.userID)
+    }
 
-    func updateUser(with userResponse: UserResponse, accessToken: String) {
+    func updateUser(with userResponse: UserResponse) {
         self.name = userResponse.name
         self.email = userResponse.email
         self.login = userResponse.login
@@ -67,10 +68,9 @@ final class User: PostgreSQLModel, Codable {
         self.plan = userResponse.plan
     }
 
-    init(userResponse: UserResponse, accessToken: String) {
+    init(userResponse: UserResponse) {
         self.name = userResponse.name
         self.email = userResponse.email
-        self.githubAccessToken = accessToken
         self.login = userResponse.login
         self.nodeID = userResponse.nodeID
         self.avatarURL = userResponse.avatarURL
@@ -106,30 +106,6 @@ final class User: PostgreSQLModel, Codable {
         self.collaborators = userResponse.collaborators
         self.twoFactorAuthentication = userResponse.twoFactorAuthentication
         self.plan = userResponse.plan
-    }
-}
-
-struct UserToken: PostgreSQLModel {
-    var id: Int?
-    var string: String
-    var userID: User.ID
-
-    var user: Parent<UserToken, User> {
-        return parent(\.userID)
-    }
-}
-extension UserToken: Token {
-    /// See `Token`.
-    typealias UserType = User
-
-    /// See `Token`.
-    static var tokenKey: WritableKeyPath<UserToken, String> {
-        return \.string
-    }
-
-    /// See `Token`.
-    static var userIDKey: WritableKeyPath<UserToken, User.ID> {
-        return \.userID
     }
 }
 
@@ -146,3 +122,6 @@ extension User: Content { }
 
 /// Allows `User` to be used as a dynamic parameter in route definitions.
 extension User: Parameter { }
+
+/// Allows us to use sessions for web authentication
+extension User: SessionAuthenticatable { }

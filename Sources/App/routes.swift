@@ -11,21 +11,20 @@ public func routes(_ router: Router) throws {
 
     // Example of configuring a controller
     let userController = UserController()
-    router.get("users", use: userController.index)
-    router.post("users", use: userController.create)
-    router.delete("users", User.parameter, use: userController.delete)
 
 
     guard let clientID = Environment.get("github_app_client_id"),
         let clientSecret = Environment.get("github_app_client_secret") else { fatalError() }
     let githubOAuthController = GithubOAuthController(clientID: clientID, clientSecret: clientSecret)
+
     router.get("login", use: githubOAuthController.login)
-    router.get("oauth/redirect", use: githubOAuthController.callback)
 
-    // Use user model to create an authentication middleware
-    let token = User.tokenAuthMiddleware()
+    let session = User.authSessionsMiddleware()
+    router.grouped(session).get("oauth/redirect", use: githubOAuthController.callback)
+    router.grouped(session).get("/", use: githubOAuthController.loginCheck)
+    router.grouped(session).get("users", use: userController.index)
+    router.grouped(session).post("users", use: userController.create)
+    router.grouped(session).delete("users", User.parameter, use: userController.delete)
 
-    // Create a route closure wrapped by this middleware
-    router.grouped(token).get("hello", use: userController.hello)
 }
 
