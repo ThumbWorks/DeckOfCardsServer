@@ -7,7 +7,7 @@ import Leaf
 public func routes(_ router: Router) throws {
     // Basic "It works" example
     let fetchController = GeneratedCodeFetchController()
-    router.post("webook", use: fetchController.webhook)
+    router.post("webhook", use: fetchController.webhook)
 
     // Example of configuring a controller
     let userController = UserController()

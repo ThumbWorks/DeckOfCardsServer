@@ -111,8 +111,6 @@ final class GithubOAuthController {
 
     func callback(_ req: Request) throws -> Future<String> {
         let code = try req.query.decode(GithubCallbackRequest.self).code
-
-
         User.authenticate(sessionID: code.hashValue, on: req).catch { error in
             print(error)
         }

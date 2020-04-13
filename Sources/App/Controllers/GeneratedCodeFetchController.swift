@@ -47,7 +47,7 @@ struct WebhookRequest: Content {
 
 extension WebhookRequest {
     func owner() -> String {
-        // Seems dangerous to return an indexed value
+        // TODO Seems dangerous to return an indexed value. This crashes when i test with curl
         return path.components(separatedBy: "/")[2]
     }
     func repo() -> String {
@@ -62,12 +62,6 @@ extension WebhookRequest {
 }
 
 final class GeneratedCodeFetchController {
-    /**
-     Speak status of either an error or success state during local development
-     */
-    private func say(someWord: String) -> Bool {
-        return shell("say", someWord) == 1
-    }
     
     private func shell(_ args: String...) -> Int32 {
         let task = Process()
@@ -110,25 +104,18 @@ final class GeneratedCodeFetchController {
 
     }
 
-
-    private func fetchGeneratedClient(client: Client, requestData: Data) {
-
+    private func fetchGeneratedClient(client: Client, requestData: Data) -> EventLoopFuture<GenerationResponse>  {
         let outgoingRequest = buildHTTPRequest(with: requestData)
-        let responseFuture = client.post("https://\(generatorServiceHost)/api/generate") { serverRequest in
+        return client.post("https://\(generatorServiceHost)/api/generate") { serverRequest in
             serverRequest.http = outgoingRequest
-        }
-        responseFuture.catch { error in
-            print("error \(error)")
-        }
-        _ = responseFuture.map { (response) -> (Void) in
-            // TODO probably catch these errors
-            try? response.http.body.data?.write(to: URL(fileURLWithPath: "\(pathToGeneratedCode)/client.zip"))
-            try? self.unzipPayload()
-            try? self.cleanupGeneratedCode()
+        }.map { response -> GenerationResponse in
+            try response.http.body.data?.write(to: URL(fileURLWithPath: "\(pathToGeneratedCode)/client.zip"))
+            try self.unzipPayload()
+            try self.cleanupGeneratedCode()
             // TODO Add the github integration here
+            return GenerationResponse(status: true, localizedString: "Successfully built client!")
         }
     }
-
 
     private func buildJSONPayload(specURLString: String) throws -> Data {
         let bodyDict = [
@@ -161,14 +148,12 @@ final class GeneratedCodeFetchController {
      },
      "host": "petstore.swagger.io",
      ...
+
+     Try this for testing: $ curl -i --request POST -H "Content-Type: application/json" localhost:8080/webhook -d '{"path":"/apis/Thumbworks/DeckOfCards/1.0.0","action":"after_api_version_saved"}'
+
      **/
-    private func parseRequestJson(rawRequestContent: ContentContainer<Request>) -> WebhookRequest {
-        var content: WebhookRequest = WebhookRequest(path: "", action: "")
-        _ = try? rawRequestContent.decode(WebhookRequest.self).map(to: HTTPStatus.self) { webhookRequest in
-            content = webhookRequest
-            return .ok
-        }
-        return content
+    private func parseRequestJson(rawRequestContent: ContentContainer<Request>) throws -> EventLoopFuture<WebhookRequest> {
+        return try rawRequestContent.decode(WebhookRequest.self)
     }
 
     private func buildHTTPRequest(with requestData: Data) -> HTTPRequest {
@@ -178,15 +163,15 @@ final class GeneratedCodeFetchController {
         return httpReq
     }
 
-    func webhook(_ req: Request) throws -> GenerationResponse {
-        let content = parseRequestJson(rawRequestContent: req.content)
+    func webhook(_ req: Request) throws -> EventLoopFuture<GenerationResponse> {
+        return try req.content.decode(WebhookRequest.self).flatMap({ request -> EventLoopFuture<GenerationResponse> in
+            // Step 1: Make the tmp directory and fail silently
+            try? self.makeCodeDirectory()
+            let specURLString = "https://api.swaggerhub.com/apis/\(request.owner())/\(request.repo())/\(request.version())/swagger.json"
+            let client = try req.client()
+            let requestData = try self.buildJSONPayload(specURLString: specURLString)
+            return self.fetchGeneratedClient(client: client, requestData: requestData)
+        })
 
-        // Step 1: Make the tmp directory and fail silently
-        try? makeCodeDirectory()
-        let specURLString = "https://api.swaggerhub.com/apis/\(content.owner())/\(content.repo())/\(content.version())/swagger.json"
-        let client = try req.client()
-        let requestData = try buildJSONPayload(specURLString: specURLString)
-        fetchGeneratedClient(client: client, requestData: requestData)
-        return GenerationResponse(status: true, localizedString: "Successfully built client!")
     }
 }

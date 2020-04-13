@@ -23,7 +23,6 @@ extension UserToken: Token {
 
     /// See `Token`.
     static var tokenKey: WritableKeyPath<UserToken, String> {
-        print("checking the tokenKey")
         return \.string
     }
 
