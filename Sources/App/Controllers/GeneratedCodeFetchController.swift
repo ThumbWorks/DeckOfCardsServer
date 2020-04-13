@@ -7,7 +7,6 @@
 
 import Vapor
 struct GenerationResponse: Content {
-    var status: Bool
     var localizedString: String
 }
 
@@ -46,16 +45,15 @@ struct WebhookRequest: Content {
 }
 
 extension WebhookRequest {
-    func owner() -> String {
-        // TODO Seems dangerous to return an indexed value. This crashes when i test with curl
+    func owner() throws -> String {
         return path.components(separatedBy: "/")[2]
     }
-    func repo() -> String {
+    func repo() throws -> String {
         // Seems dangerous to return an indexed value
         return path.components(separatedBy: "/")[3]
     }
 
-    func version() -> String {
+    func version() throws -> String {
         // Seems dangerous to return an indexed value
         return path.components(separatedBy: "/")[4]
     }
@@ -113,7 +111,8 @@ final class GeneratedCodeFetchController {
             try self.unzipPayload()
             try self.cleanupGeneratedCode()
             // TODO Add the github integration here
-            return GenerationResponse(status: true, localizedString: "Successfully built client!")
+            // 1. Look up the user's configuration
+            return GenerationResponse(localizedString: "Successfully built client!")
         }
     }
 
@@ -167,7 +166,7 @@ final class GeneratedCodeFetchController {
         return try req.content.decode(WebhookRequest.self).flatMap({ request -> EventLoopFuture<GenerationResponse> in
             // Step 1: Make the tmp directory and fail silently
             try? self.makeCodeDirectory()
-            let specURLString = "https://api.swaggerhub.com/apis/\(request.owner())/\(request.repo())/\(request.version())/swagger.json"
+            let specURLString = "https://api.swaggerhub.com/apis/\(try request.owner())/\(try request.repo())/\(try request.version())/swagger.json"
             let client = try req.client()
             let requestData = try self.buildJSONPayload(specURLString: specURLString)
             return self.fetchGeneratedClient(client: client, requestData: requestData)
