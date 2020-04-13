@@ -31,8 +31,12 @@ This is a service which attempts to do the following:
 
 ### Current status
 
-1. The generation process works locally
-2. When deployed to Heroku, there is no installed binary `swagger-codegen` so the system falls apart.
+1. The generation process works by requesting that a remote service, which is set up to do the swagger generation. 
+2. Generated client is pulled down, unzipped and moved to a temporary location
+3. Github Oauth is roughly working. An access token has been collected.
+4. A user can be logged into the website with the github token.
 
-### TODO:
-Figure out how to install the codegen, or fire up a [docker instance](https://github.com/swagger-api/swagger-codegen#docker)
+### TODO
+1. Use the github token to push to the repo
+2. Allow the user to configure which swaggers they would like to register for webhook catches.
+
