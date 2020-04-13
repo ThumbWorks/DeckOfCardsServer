@@ -116,7 +116,6 @@ final class GithubOAuthController {
         User.authenticate(sessionID: code.hashValue, on: req).catch { error in
             print(error)
         }
-        try send(code, on: req)
         return try send(code, on: req)
     }
 
