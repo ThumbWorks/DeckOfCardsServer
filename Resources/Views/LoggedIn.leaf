@@ -1,3 +1,20 @@
 <html>
 You're logged in #(user.name)
+
+<form action="/submitAutomation">
+<label for="fname">SwaggerHub URL:</label><br>
+<input type="text" id="swagger owner name" name="owner" value="thumbworks"><br>
+<input type="text" id="swagger spec name" name="spec" value="DeckOfCards"><br>
+<input type="text" id="api version number" name="version" value="1.0.0"><br>
+
+<select id="team" name="team">
+  <option value="tw">TW</option>
+  <option value="uber">uber</option>
+  <option value="vungle">vungle</option>
+  <option value="tia">tia</option>
+</select>
+
+<input type="submit" value="Submit">
+
+</form>
 </html>
