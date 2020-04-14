@@ -1,13 +1,13 @@
 <html>
 You're logged in #(user.name)
 
-<form action="/submitAutomation">
+<form method="POST" action="/trigger/create">
 <label for="fname">SwaggerHub URL:</label><br>
-<input type="text" id="swagger owner name" name="owner" value="thumbworks"><br>
-<input type="text" id="swagger spec name" name="spec" value="DeckOfCards"><br>
+<input type="text" id="swagger owner name" name="swaggerOwner" value="thumbworks"><br>
+<input type="text" id="swagger spec name" name="swaggerSpecName" value="DeckOfCards"><br>
 <input type="text" id="api version number" name="version" value="1.0.0"><br>
 
-<select id="team" name="team">
+<select id="githubTeam" name="githubTeam">
   <option value="tw">TW</option>
   <option value="uber">uber</option>
   <option value="vungle">vungle</option>
@@ -17,4 +17,22 @@ You're logged in #(user.name)
 <input type="submit" value="Submit">
 
 </form>
+
+
+Active triggers:
+<ul>
+#for(trigger in triggers) {
+ <li>
+
+ When <b>#(trigger.swaggerRepo)</b> is updated it will generate and push to <b>#(trigger.gitRepo)</b>
+
+<form action="/trigger/delete" method="POST">
+    <button type="deleteButton" name="triggerID" value="#(trigger.id)" class="btn-link">Delete</button>
+</form>
+  </li>
+
+}
+</ul>
+
+<a href = "/logout">Logout</a>
 </html>

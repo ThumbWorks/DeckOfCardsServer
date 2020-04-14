@@ -3,13 +3,7 @@ import Vapor
 /// Controls basic CRUD operations on `user`s.
 final class UserController {
     /// Returns a list of all `user`s.
-    func index(_ req: Request) throws -> Future<[User]> {
-        _ = User.query(on: req).all().map { users in
-            if users.isEmpty { print("empty user list") }
-            users.forEach { user in
-                print("This is a user \(user)")
-            }
-        }
+    func users(_ req: Request) throws -> Future<[User]> {
         return User.query(on: req).all()
     }
 

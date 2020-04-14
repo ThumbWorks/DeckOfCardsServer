@@ -6,6 +6,7 @@
 //
 
 import Vapor
+
 struct GenerationResponse: Content {
     var localizedString: String
 }
@@ -166,11 +167,13 @@ final class GeneratedCodeFetchController {
         return try req.content.decode(WebhookRequest.self).flatMap({ request -> EventLoopFuture<GenerationResponse> in
             // Step 1: Make the tmp directory and fail silently
             try? self.makeCodeDirectory()
-            let specURLString = "https://api.swaggerhub.com/apis/\(try request.owner())/\(try request.repo())/\(try request.version())/swagger.json"
+            let repo = try request.repo()
+            let owner = try request.owner()
+            let version = try request.version()
+            let specURLString = "https://api.swaggerhub.com/apis/\(owner)/\(repo)/\(version)/swagger.json"
             let client = try req.client()
             let requestData = try self.buildJSONPayload(specURLString: specURLString)
             return self.fetchGeneratedClient(client: client, requestData: requestData)
         })
-
     }
 }

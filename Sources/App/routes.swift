@@ -5,11 +5,11 @@ import Leaf
 
 /// Register your application's routes here.
 public func routes(_ router: Router) throws {
-    // Basic "It works" example
+    // The webhook that controlls the fetch logic
     let fetchController = GeneratedCodeFetchController()
     router.post("webhook", use: fetchController.webhook)
 
-    // Example of configuring a controller
+    let triggerController = TriggerController()
     let userController = UserController()
 
 
@@ -20,9 +20,28 @@ public func routes(_ router: Router) throws {
     router.get("login", use: githubOAuthController.login)
 
     let session = User.authSessionsMiddleware()
-    router.grouped(session).get("oauth/redirect", use: githubOAuthController.callback)
+
+    // Triggers
+    let authenticatedTriggerGroup = router.grouped(session).grouped("trigger")
+    // create trigger
+    authenticatedTriggerGroup.post("create", use: triggerController.index)
+
+    // delete trigger
+    authenticatedTriggerGroup.post("delete", use: triggerController.delete)
+
+    // list triggers
+    authenticatedTriggerGroup.get("showAllTriggers/", use: triggerController.showAllTriggers)
+
+
     router.grouped(session).get("/", use: githubOAuthController.loginCheck)
-    router.grouped(session).get("users", use: userController.index)
+
+    // the login redirect
+    router.grouped(session).get("oauth/redirect", use: githubOAuthController.callback)
+
+
+
+    router.grouped(session).get("/logout", use: githubOAuthController.logout)
+    router.grouped(session).get("users", use: userController.users)
     router.grouped(session).post("users", use: userController.create)
     router.grouped(session).delete("users", User.parameter, use: userController.delete)
 

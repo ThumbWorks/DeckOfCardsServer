@@ -93,23 +93,26 @@ final class GithubOAuthController {
         self.clientSecret = clientSecret
     }
     
-
+    func logout(_ req: Request) throws -> Future<View> {
+        try req.unauthenticate(User.self)
+        return try loginCheck(req)
+    }
 
     func login(_ req: Request) throws -> Future<View> {
         return try req.view().render("Users", ENV)
     }
 
     func loginCheck(_ req: Request) throws -> Future<View> {
-        let user = try req.requireAuthenticated(User.self)
-        return try req.view().render("LoggedIn", ["user" : user])
-        // TODO add the redirect middleware
-//        } else {
-//            print("not logged in")
-//            return try login(req)
-//        }
+        guard let _ = try req.authenticated() as User? else {
+            return try login(req)
+        }
+        return Trigger.query(on: req).all().flatMap { allTriggers -> EventLoopFuture<View> in
+            let payload = ["triggers" : allTriggers]
+            return try req.view().render("LoggedIn", payload)
+        }
     }
 
-    func callback(_ req: Request) throws -> Future<String> {
+    func callback(_ req: Request) throws -> Future<Response> {
         let code = try req.query.decode(GithubCallbackRequest.self).code
         User.authenticate(sessionID: code.hashValue, on: req).catch { error in
             print(error)
@@ -117,11 +120,11 @@ final class GithubOAuthController {
         return try send(code, on: req)
     }
 
-    private func send(_ code: String, on req: Request) throws -> Future<String> {
+    private func send(_ code: String, on req: Request) throws -> Future<Response> {
         let client = try req.client()
         return client.get("https://.....") { serverRequest in
             serverRequest.http = buildCodeForAccessTokenExchangeRequest(with: code)
-        }.flatMap { response -> EventLoopFuture<String> in
+        }.flatMap { response in
             return try response.content.decode(GithubAuthTokenResponse.self).flatMap { try self.getGithubUser(with: $0.accessToken, on: req) }
         }
     }
@@ -134,7 +137,7 @@ final class GithubOAuthController {
         return request
     }
 
-    private func getGithubUser(with accessToken: String, on req: Request) throws -> EventLoopFuture<String> {
+    private func getGithubUser(with accessToken: String, on req: Request) throws -> EventLoopFuture<Response> {
         let client = try req.client()
 
         // Create the request to fetch the user from github
@@ -143,7 +146,7 @@ final class GithubOAuthController {
         }
 
         // With the response do this
-        return responseFuture.flatMap { response -> EventLoopFuture<String> in
+        return responseFuture.flatMap { response  in
             do {
                 let decodedResponse = try response.content.decode(UserResponse.self)
                 return decodedResponse.flatMap { self.queryUser(userResponse: $0, accessToken: accessToken, on: req) }
@@ -151,8 +154,8 @@ final class GithubOAuthController {
         }
     }
 
-    private func queryUser(userResponse: UserResponse, accessToken: String, on req: Request) -> EventLoopFuture<String> {
-        return User.query(on: req).filter(\.login == userResponse.login).first().flatMap { user -> EventLoopFuture<String> in
+    private func queryUser(userResponse: UserResponse, accessToken: String, on req: Request) -> EventLoopFuture<Response> {
+        return User.query(on: req).filter(\.login == userResponse.login).first().flatMap { user in
             let savableUser: User
             if let user = user {
                 // If yes, update
@@ -179,12 +182,12 @@ final class GithubOAuthController {
         return request
     }
 
-    private func queryToken(user: User, accessToken: String, on req: Request) throws -> EventLoopFuture<String> {
-        return try UserToken.query(on: req).filter(\.userID == user.requireID()).first().flatMap { userToken -> EventLoopFuture<String> in
+    private func queryToken(user: User, accessToken: String, on req: Request) throws -> EventLoopFuture<Response> {
+        return try UserToken.query(on: req).filter(\.userID == user.requireID()).first().flatMap { userToken in
             var newToken = try UserToken(string: accessToken, userID: user.requireID())
             newToken.bearerToken = accessToken
-            return newToken.save(on: req).map { token -> (String) in
-                return ".ok"
+            return newToken.save(on: req).map { token -> Response in
+                return req.redirect(to: "/")
             }
         }
     }
