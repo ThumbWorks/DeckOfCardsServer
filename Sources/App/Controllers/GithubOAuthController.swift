@@ -167,6 +167,7 @@ final class GithubOAuthController {
             }
 
             let session = try req.session()
+            session["githubToken"] = accessToken
             print("the session is \(session)")
             // try req.authenticate(savableUser)
             try req.authenticateSession(savableUser)
