@@ -38,15 +38,10 @@ public func routes(_ router: Router) throws {
     // the login redirect
     router.grouped(session).get("oauth/redirect", use: githubOAuthController.callback)
 
-
-
     let authenticatedUserGroup = router.grouped(session).grouped("users")
-
-
     router.grouped(session).get("/logout", use: githubOAuthController.logout)
     authenticatedUserGroup.get("/", use: userController.users)
     authenticatedUserGroup.post("/", use: userController.create)
     authenticatedUserGroup.delete("/", User.parameter, use: userController.delete)
-    authenticatedUserGroup.get("fetchRepos", use: userController.fetchRepos)
 }
 

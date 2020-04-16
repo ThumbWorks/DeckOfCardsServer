@@ -99,12 +99,15 @@ final class GithubOAuthController {
     }
 
     func loginCheck(_ req: Request) throws -> Future<View> {
-        guard let _ = try req.authenticated() as User? else {
+        guard let user = try req.authenticated() as User? else {
             return try login(req)
         }
         return Trigger.query(on: req).all().flatMap { allTriggers -> EventLoopFuture<View> in
-            let payload = ["triggers" : allTriggers]
-            return try req.view().render(.loggedInPath, payload)
+            return try user.fetchRepos(req).flatMap { repos  in
+                let payload = LoggedInData(triggers: allTriggers, teams: repos.filter { $0.permissions.push }.map { $0.name })
+                           return try req.view().render(.loggedInPath, payload)
+            }
+
         }
     }
 

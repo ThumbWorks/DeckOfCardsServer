@@ -33,26 +33,6 @@ final class UserController {
         }
     }
 
-    func fetchRepos(_ req: Request) throws -> Future<HTTPStatus> {
-        let user = try req.requireAuthenticated(User.self)
-        let repoURL = user.reposURL
-
-        let client = try req.client()
-
-        // Create the request to fetch the user from github
-        let responseFuture = client.get(repoURL) { serverRequest in
-            if let token = try req.session()[.githubToken] {
-                serverRequest.http = buildGetRepoRequest(with: repoURL.absoluteString, accessToken: token)
-            }
-        }
-        return responseFuture.flatMap { response  in
-            return try response.content.decode([RepoResponse].self).map  { response in
-                print(response)
-                return HTTPStatus.ok
-            }
-        }
-    }
-
     /// Deletes a parameterized `user`.
     func delete(_ req: Request) throws -> Future<HTTPStatus> {
         return try req.parameters.next(User.self).flatMap { user in
@@ -65,14 +45,4 @@ final class UserController {
         print( "Hello, \(user.name).")
         return req.future(HTTPStatus.ok)
     }
-}
-
-extension UserController {
-    private func buildGetRepoRequest(with path: String, accessToken: String) -> HTTPRequest {
-           var request =  HTTPRequest(method: .GET, url: path)
-           request.headers.add(name: .authorization, value: "token \(accessToken)")
-
-           request.headers.add(name: HTTPHeaderName.accept, value: "application/json")
-           return request
-       }
 }

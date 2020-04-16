@@ -19,6 +19,11 @@ final class Trigger: PostgreSQLModel, Codable {
         self.gitRepo = gitRepo
         self.swaggerRepo = swaggerRepo
     }
+
+    init(payload: SubmitPayload) {
+        self.gitRepo = "\(payload.githubTeam)/\(payload.swaggerSpecName)"
+        self.swaggerRepo = payload.swaggerSpecName
+    }
 }
 
 /// Allows `Trigger` to be used as a dynamic migration.
