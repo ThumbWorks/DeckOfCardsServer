@@ -23,13 +23,13 @@ final class TriggerController {
 
     private static func allTriggerView(on req: Request) throws -> EventLoopFuture<View> {
         return Trigger.query(on: req).all().flatMap { allTriggers -> EventLoopFuture<View> in
-            let payload = ["triggers" : allTriggers]
-            return try req.view().render("loggedIn", payload)
+            let payload = [String.triggersKey : allTriggers]
+            return try req.view().render(.loggedInPath, payload)
         }
     }
 
     func delete(_ req: Request) throws -> EventLoopFuture<Response> {
-        let user = try req.requireAuthenticated(User.self)
+        let _ = try req.requireAuthenticated(User.self)
         return try req.content.decode(DeletePayload.self).flatMap { payload in
             return Trigger.find(payload.triggerID, on: req).flatMap { trigger in
                 if let trigger = trigger {
@@ -55,11 +55,11 @@ final class TriggerController {
             let newTrigger = Trigger(gitRepo: repo, swaggerRepo: submitPayload.swaggerSpecName)
             return newTrigger.save(on: req).flatMap { trigger in
                 guard let _ = trigger.id else {
-                    return try req.view().render("createFailed")
+                    return try req.view().render(.createFailed)
                 }
                 return Trigger.query(on: req).all().flatMap { allTriggers -> EventLoopFuture<View> in
-                    let payload = ["new": [trigger], "triggers" : allTriggers]
-                    return try req.view().render("loggedIn", payload)
+                    let payload: [String: [Trigger]] = [.newKey: [trigger], .triggersKey : allTriggers]
+                    return try req.view().render(.loggedInPath, payload)
                 }
             }
         })

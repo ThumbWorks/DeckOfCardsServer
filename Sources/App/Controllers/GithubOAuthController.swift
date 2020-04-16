@@ -8,9 +8,6 @@
 import Vapor
 import FluentPostgreSQL
 import Authentication
-private let githubHost = "github.com"
-private let postPath = "/login/oauth/access_token"
-private let getUserPath = "/user"
 
 struct GithubCallbackRequest: Content {
     var code: String
@@ -70,7 +67,6 @@ struct UserResponse: Content {
         case diskUsage = "disk_usage"
         case twoFactorAuthentication = "two_factor_authentication"
         case name, company, blog, location, url, id, login, type, hireable, bio, email, followers, following, collaborators, plan
-
     }
 }
 
@@ -99,7 +95,7 @@ final class GithubOAuthController {
     }
 
     func login(_ req: Request) throws -> Future<View> {
-        return try req.view().render("Users", ENV)
+        return try req.view().render(.users, ENV)
     }
 
     func loginCheck(_ req: Request) throws -> Future<View> {
@@ -108,7 +104,7 @@ final class GithubOAuthController {
         }
         return Trigger.query(on: req).all().flatMap { allTriggers -> EventLoopFuture<View> in
             let payload = ["triggers" : allTriggers]
-            return try req.view().render("LoggedIn", payload)
+            return try req.view().render(.loggedInPath, payload)
         }
     }
 
@@ -130,7 +126,7 @@ final class GithubOAuthController {
     }
 
     private func buildCodeForAccessTokenExchangeRequest(with code: String) -> HTTPRequest {
-        let urlToPost = "https://\(githubHost)\(postPath)?code=\(code)"
+        let urlToPost = "https://\(String.githubHost)\(String.postPath)?code=\(code)"
         var request =  HTTPRequest(method: .POST, url: urlToPost)
         request.headers.basicAuthorization = BasicAuthorization(username: clientID, password: clientSecret)
         request.headers.add(name: HTTPHeaderName.accept, value: "application/json")
@@ -167,7 +163,7 @@ final class GithubOAuthController {
             }
 
             let session = try req.session()
-            session["githubToken"] = accessToken
+            session[.githubToken] = accessToken
             print("the session is \(session)")
             // try req.authenticate(savableUser)
             try req.authenticateSession(savableUser)
@@ -176,7 +172,7 @@ final class GithubOAuthController {
     }
 
     private func buildGetUserRequest(with accessToken: String) -> HTTPRequest {
-        let urlToPost = "https://api.\(githubHost)\(getUserPath)"
+        let urlToPost = "https://api.\(String.githubHost)\(String.getUserPath)"
         var request =  HTTPRequest(method: .GET, url: urlToPost)
         request.headers.add(name: .authorization, value: "token \(accessToken)")
         request.headers.add(name: HTTPHeaderName.accept, value: "application/json")

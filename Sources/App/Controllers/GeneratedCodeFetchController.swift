@@ -11,11 +11,6 @@ struct GenerationResponse: Content {
     var localizedString: String
 }
 
-// TODO we need to get a proper path in the form of something like /tmp/generatedCode/githubUser/reponame/language
-private let pathToGeneratedCode = "/tmp/generatedCode"
-private let generatorServiceHost = "generator3.swagger.io"
-
-
 enum GenerationError: Error {
     case failedToCreateDirectory
     case failedToGenerateClientCode
@@ -75,29 +70,29 @@ final class GeneratedCodeFetchController {
         return task.terminationStatus
     }
     private func unzipPayload() throws {
-        guard shell("unzip", "-o", "\(pathToGeneratedCode)/client.zip", "-d", "\(pathToGeneratedCode)/client/") == 0 else {
+        guard shell("unzip", "-o", "\(String.pathToGeneratedCode)/client.zip", "-d", "\(String.pathToGeneratedCode)/client/") == 0 else {
             throw GenerationError.failedToUnzip
         }
     }
     /// mv /tmp/generatedCode/SwaggerClient/Classes/Swaggers/* /tmp/generatedCode/
     private func cleanupGeneratedCode() throws {
         // This is all very swift-client specific instructions
-        guard shell("cp", "-r", "\(pathToGeneratedCode)/client/SwaggerClient/Classes/Swaggers/", "\(pathToGeneratedCode)/") == 0 else {
+        guard shell(.copyCommand, .recursive, "\(String.pathToGeneratedCode)/client/SwaggerClient/Classes/Swaggers/", "\(String.pathToGeneratedCode)/") == 0 else {
             throw GenerationError.failedToMoveGeneratedCode
         }
-        guard shell("rm", "-r", "\(pathToGeneratedCode)/client/SwaggerClient/") == 0 else {
+        guard shell(.removeCommand, .recursive, "\(String.pathToGeneratedCode)/client/SwaggerClient/") == 0 else {
             throw GenerationError.failedToRemoveArtifacts("Swagger Client directory")
         }
-        guard shell("rm", "\(pathToGeneratedCode)/client/SwaggerClient.podspec") == 0 else {
+        guard shell(.removeCommand, "\(String.pathToGeneratedCode)/client/SwaggerClient.podspec") == 0 else {
             throw GenerationError.failedToRemoveArtifacts("Pod spec file")
         }
-        guard shell("rm", "\(pathToGeneratedCode)/client.zip") == 0 else {
+        guard shell(.removeCommand, "\(String.pathToGeneratedCode)/client.zip") == 0 else {
             throw GenerationError.failedToRemoveArtifacts("downloaded zip file")
         }
-        guard shell("rm", "\(pathToGeneratedCode)/client/git_push.sh") == 0 else {
+        guard shell(.removeCommand, "\(String.pathToGeneratedCode)/client/git_push.sh") == 0 else {
             throw GenerationError.failedToRemoveArtifacts("git push shell script")
         }
-        guard shell("rm", "\(pathToGeneratedCode)/client/Cartfile") == 0 else {
+        guard shell(.removeCommand, "\(String.pathToGeneratedCode)/client/Cartfile") == 0 else {
             throw GenerationError.failedToRemoveArtifacts("Cart file")
         }
 
@@ -105,10 +100,10 @@ final class GeneratedCodeFetchController {
 
     private func fetchGeneratedClient(client: Client, requestData: Data) -> EventLoopFuture<GenerationResponse>  {
         let outgoingRequest = buildHTTPRequest(with: requestData)
-        return client.post("https://\(generatorServiceHost)/api/generate") { serverRequest in
+        return client.post("https://\(String.generatorServiceHost)/api/generate") { serverRequest in
             serverRequest.http = outgoingRequest
         }.map { response -> GenerationResponse in
-            try response.http.body.data?.write(to: URL(fileURLWithPath: "\(pathToGeneratedCode)/client.zip"))
+            try response.http.body.data?.write(to: URL(fileURLWithPath: "\(String.pathToGeneratedCode)/client.zip"))
             try self.unzipPayload()
             try self.cleanupGeneratedCode()
             // TODO Add the github integration here
@@ -128,7 +123,7 @@ final class GeneratedCodeFetchController {
     }
     
     private func makeCodeDirectory() throws {
-        guard shell("mkdir", pathToGeneratedCode) == 1  else {
+        guard shell("mkdir", String.pathToGeneratedCode) == 1  else {
             throw GenerationError.failedToCreateDirectory
         }
     }
@@ -157,7 +152,7 @@ final class GeneratedCodeFetchController {
     }
 
     private func buildHTTPRequest(with requestData: Data) -> HTTPRequest {
-        var httpReq = HTTPRequest(method: .POST, url: "https://\(generatorServiceHost)/api/generate")
+        var httpReq = HTTPRequest(method: .POST, url: "https://\(String.generatorServiceHost)/api/generate")
         httpReq.contentType = MediaType.json
         httpReq.body = HTTPBody(data: requestData)
         return httpReq

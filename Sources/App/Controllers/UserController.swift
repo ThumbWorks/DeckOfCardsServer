@@ -41,7 +41,7 @@ final class UserController {
 
         // Create the request to fetch the user from github
         let responseFuture = client.get(repoURL) { serverRequest in
-            if let token = try req.session()["githubToken"] {
+            if let token = try req.session()[.githubToken] {
                 serverRequest.http = buildGetRepoRequest(with: repoURL.absoluteString, accessToken: token)
             }
         }
@@ -71,6 +71,7 @@ extension UserController {
     private func buildGetRepoRequest(with path: String, accessToken: String) -> HTTPRequest {
            var request =  HTTPRequest(method: .GET, url: path)
            request.headers.add(name: .authorization, value: "token \(accessToken)")
+
            request.headers.add(name: HTTPHeaderName.accept, value: "application/json")
            return request
        }
