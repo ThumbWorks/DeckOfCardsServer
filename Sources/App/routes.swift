@@ -40,10 +40,13 @@ public func routes(_ router: Router) throws {
 
 
 
-    router.grouped(session).get("/logout", use: githubOAuthController.logout)
-    router.grouped(session).get("users", use: userController.users)
-    router.grouped(session).post("users", use: userController.create)
-    router.grouped(session).delete("users", User.parameter, use: userController.delete)
+    let authenticatedUserGroup = router.grouped(session).grouped("users")
 
+
+    router.grouped(session).get("/logout", use: githubOAuthController.logout)
+    authenticatedUserGroup.get("/", use: userController.users)
+    authenticatedUserGroup.post("/", use: userController.create)
+    authenticatedUserGroup.delete("/", User.parameter, use: userController.delete)
+    authenticatedUserGroup.get("fetchRepos", use: userController.fetchRepos)
 }
 

@@ -35,4 +35,5 @@ Active triggers:
 </ul>
 
 <a href = "/logout">Logout</a>
+<a href = "/users/fetchRepos">fetchRepos</a>
 </html>
