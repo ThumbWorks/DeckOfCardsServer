@@ -43,5 +43,6 @@ public func routes(_ router: Router) throws {
     authenticatedUserGroup.get("/", use: userController.users)
     authenticatedUserGroup.post("/", use: userController.create)
     authenticatedUserGroup.delete("/", User.parameter, use: userController.delete)
+    authenticatedUserGroup.get("/repos", use: userController.fetchGithubRepos)
 }
 

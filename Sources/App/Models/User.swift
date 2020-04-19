@@ -136,9 +136,12 @@ extension User {
                if let token = try req.session()[.githubToken] {
                    serverRequest.http = buildGetRepoRequest(with: repoURL.absoluteString, accessToken: token)
                }
-           }
-           return responseFuture.flatMap { try $0.content.decode([RepoResponse].self).map { $0 } }
-       }
+        }
+        return responseFuture.flatMap { try $0.content.decode([RepoResponse].self).map { response  in
+            return response
+            }
+        }
+    }
 
     private func buildGetRepoRequest(with path: String, accessToken: String) -> HTTPRequest {
              var request =  HTTPRequest(method: .GET, url: path)

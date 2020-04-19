@@ -45,4 +45,9 @@ final class UserController {
         print( "Hello, \(user.name).")
         return req.future(HTTPStatus.ok)
     }
+
+    func fetchGithubRepos(_ req: Request) throws -> Future<[RepoResponse]> {
+        let user = try req.requireAuthenticated(User.self)
+        return try user.fetchRepos(req)
+    }
 }

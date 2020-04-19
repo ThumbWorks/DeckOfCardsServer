@@ -24,10 +24,8 @@ final class TriggerController {
     private static func allTriggerView(on req: Request) throws -> EventLoopFuture<View> {
         let user = try req.requireAuthenticated(User.self)
         return Trigger.query(on: req).all().flatMap { allTriggers -> EventLoopFuture<View> in
-            return try user.fetchRepos(req).flatMap { repos  in
-                let payload = LoggedInData(triggers: allTriggers, teams: repos.filter { $0.permissions.push }.map { $0.fullName } )
-                return try req.view().render(.loggedInPath, payload)
-            }
+            let payload = LoggedInData(triggers: allTriggers)
+            return try req.view().render(.loggedInPath, payload)
         }
     }
 
@@ -61,10 +59,8 @@ final class TriggerController {
                     return try req.view().render(.createFailed)
                 }
                 return Trigger.query(on: req).all().flatMap { allTriggers -> EventLoopFuture<View> in
-                    return try user.fetchRepos(req).flatMap { repos  in
-                        let payload = LoggedInData(triggers: allTriggers, newTrigger: trigger, teams: repos.filter { $0.permissions.push }.map { $0.fullName })
-                        return try req.view().render(.loggedInPath, payload)
-                    }
+                    let payload = LoggedInData(triggers: allTriggers, newTrigger: trigger)
+                    return try req.view().render(.loggedInPath, payload)
                 }
             }
         })

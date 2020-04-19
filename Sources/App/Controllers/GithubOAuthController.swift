@@ -103,11 +103,8 @@ final class GithubOAuthController {
             return try login(req)
         }
         return Trigger.query(on: req).all().flatMap { allTriggers -> EventLoopFuture<View> in
-            return try user.fetchRepos(req).flatMap { repos  in
-                let payload = LoggedInData(triggers: allTriggers, teams: repos.filter { $0.permissions.push }.map { $0.name })
-                           return try req.view().render(.loggedInPath, payload)
-            }
-
+            let payload = LoggedInData(triggers: allTriggers)
+            return try req.view().render(.loggedInPath, payload)
         }
     }
 

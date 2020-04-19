@@ -9,16 +9,13 @@ import Foundation
 public struct LoggedInData: Encodable {
     let triggers: [Trigger]
     let newTrigger: Trigger?
-    let teams: [String]
 
-    init(triggers: [Trigger], newTrigger: Trigger, teams: [String]) {
+    init(triggers: [Trigger], newTrigger: Trigger) {
         self.triggers = triggers
         self.newTrigger = newTrigger
-        self.teams = teams
     }
-    init(triggers: [Trigger], teams: [String]) {
+    init(triggers: [Trigger]) {
            self.triggers = triggers
            self.newTrigger = nil
-           self.teams = teams
        }
 }
