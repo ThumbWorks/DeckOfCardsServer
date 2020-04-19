@@ -1,8 +1,9 @@
 <html>
+<head>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
 
+</head>
 <script type="text/javascript">
-
-
 
 function loadRepos() {
 
@@ -25,41 +26,72 @@ fetch('/users/repos')
 
 
 <body onload="loadRepos()">
-You're logged in #(user.name)
+<div class="container-fluid">
+  <div class="row">
 
-<div>
-<form method="POST" action="/trigger/create" >
-<label for="fname">SwaggerHub URL:</label><br>
-<input type="text" id="swagger owner name" name="swaggerOwner" value="thumbworks"><br>
-<input type="text" id="swagger spec name" name="swaggerSpecName" value="DeckOfCards"><br>
-<input type="text" id="api version number" name="version" value="1.0.0"><br>
-<div id="reposelector">
-<select id="githubRepo" name="githubRepo">
 
-</select>
+    <div class="col-sm-3" style="background-color:white;">
+
+    <div class="card" >
+      <img class="card-img-top" src=#(user.avatarURL) alt="User image">
+      <div class="card-body">
+        <h4 class="card-title">#(user.name)</h4>
+        <a href="/logout" class="btn btn-light">Logout</a>
+      </div>
+    </div>
+
+
+    <br>
+    <h4> Add a trigger </h4>
+
+      <form method="POST" action="/trigger/create" >
+        <label for="fname">SwaggerHub URL:</label><br>
+        <input type="text" id="swagger owner name" name="swaggerOwner" value="thumbworks"><br>
+        <input type="text" id="swagger spec name" name="swaggerSpecName" value="DeckOfCards"><br>
+        <input type="text" id="api version number" name="version" value="1.0.0"><br>
+        <div id="reposelector">
+          <select id="githubRepo" name="githubRepo"></select>
+        </div>
+        <input type="submit" value="Submit">
+
+      </form>
+
+    </div>
+
+    <div class="col-sm-9" style="background-color:white;">
+
+      
+
+      <h3> Active triggers: </h3>
+
+      <table class="table table-striped">
+          <thead>
+            <tr>
+              <th>Swagger</th>
+              <th>Git Repo</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+
+
+        #for(trigger in triggers) {
+          <tr>
+        <td>#(trigger.swaggerRepo)</td>
+        <td>#(trigger.gitRepo)</td>
+        <td>
+        <form action="/trigger/delete" method="POST">
+
+                <button type="deleteButton" name="triggerID" value="#(trigger.id)" class="btn btn-outline-danger btn-sm">Delete</button>
+            </form></td>
+      </tr>
+
+         
+        }
+
+    </div>
+
 </div>
-
-<input type="submit" value="Submit">
-
-</form>
 </div>
-
-
-Active triggers:
-<ul>
-#for(trigger in triggers) {
- <li>
-
- When <b>#(trigger.swaggerRepo)</b> is updated it will generate and push to <b>#(trigger.gitRepo)</b>
-
-<form action="/trigger/delete" method="POST">
-    <button type="deleteButton" name="triggerID" value="#(trigger.id)" class="btn-link">Delete</button>
-</form>
-  </li>
-
-}
-</ul>
-
-<a href = "/logout">Logout</a>
 </body>
 </html>

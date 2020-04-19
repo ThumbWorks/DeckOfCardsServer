@@ -24,7 +24,7 @@ final class TriggerController {
     private static func allTriggerView(on req: Request) throws -> EventLoopFuture<View> {
         let user = try req.requireAuthenticated(User.self)
         return Trigger.query(on: req).all().flatMap { allTriggers -> EventLoopFuture<View> in
-            let payload = LoggedInData(triggers: allTriggers)
+            let payload = LoggedInData(user: user, triggers: allTriggers)
             return try req.view().render(.loggedInPath, payload)
         }
     }
@@ -59,7 +59,7 @@ final class TriggerController {
                     return try req.view().render(.createFailed)
                 }
                 return Trigger.query(on: req).all().flatMap { allTriggers -> EventLoopFuture<View> in
-                    let payload = LoggedInData(triggers: allTriggers, newTrigger: trigger)
+                    let payload = LoggedInData(user: user, triggers: allTriggers, newTrigger: trigger)
                     return try req.view().render(.loggedInPath, payload)
                 }
             }

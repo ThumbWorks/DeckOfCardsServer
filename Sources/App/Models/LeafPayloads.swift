@@ -7,15 +7,18 @@
 
 import Foundation
 public struct LoggedInData: Encodable {
+    let user: User
     let triggers: [Trigger]
     let newTrigger: Trigger?
-
-    init(triggers: [Trigger], newTrigger: Trigger) {
+    
+    init(user: User, triggers: [Trigger], newTrigger: Trigger) {
+        self.user = user
         self.triggers = triggers
         self.newTrigger = newTrigger
     }
-    init(triggers: [Trigger]) {
-           self.triggers = triggers
-           self.newTrigger = nil
-       }
+    init(user: User, triggers: [Trigger]) {
+        self.user = user
+        self.triggers = triggers
+        self.newTrigger = nil
+    }
 }

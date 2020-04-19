@@ -103,7 +103,7 @@ final class GithubOAuthController {
             return try login(req)
         }
         return Trigger.query(on: req).all().flatMap { allTriggers -> EventLoopFuture<View> in
-            let payload = LoggedInData(triggers: allTriggers)
+            let payload = LoggedInData(user: user, triggers: allTriggers)
             return try req.view().render(.loggedInPath, payload)
         }
     }
