@@ -19,6 +19,7 @@ extension String {
 
     // code generation strings
     static let pathToGeneratedCode = "/tmp/generatedCode"
+    static let pathToClonedCode = "/tmp/generatedCodeClone"
     static let generatorServiceHost = "generator3.swagger.io"
 
     static let removeCommand = "rm"

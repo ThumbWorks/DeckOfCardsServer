@@ -17,10 +17,12 @@ enum GenerationError: Error {
     case failedToMoveGeneratedCode
     case failedToUnzip
     case failedToRemoveArtifacts(String)
+    case failedToClone
 
     var localizedDescription: String {
         switch self {
-
+        case .failedToClone:
+            return "Failed to clone"
         case .failedToCreateDirectory:
             return "Failed to create temp directory"
         case .failedToGenerateClientCode:
@@ -77,7 +79,7 @@ final class GeneratedCodeFetchController {
     /// mv /tmp/generatedCode/SwaggerClient/Classes/Swaggers/* /tmp/generatedCode/
     private func cleanupGeneratedCode() throws {
         // This is all very swift-client specific instructions
-        guard shell(.copyCommand, .recursive, "\(String.pathToGeneratedCode)/client/SwaggerClient/Classes/Swaggers/", "\(String.pathToGeneratedCode)/") == 0 else {
+        guard shell(.copyCommand, .recursive, "\(String.pathToGeneratedCode)/client/SwaggerClient/Classes/Swaggers/", "\(String.pathToGeneratedCode)/Sources/DeckOfCards") == 0 else {
             throw GenerationError.failedToMoveGeneratedCode
         }
         guard shell(.removeCommand, .recursive, "\(String.pathToGeneratedCode)/client/SwaggerClient/") == 0 else {
@@ -95,7 +97,13 @@ final class GeneratedCodeFetchController {
         guard shell(.removeCommand, "\(String.pathToGeneratedCode)/client/Cartfile") == 0 else {
             throw GenerationError.failedToRemoveArtifacts("Cart file")
         }
+    }
 
+    private func cloneRepo() throws {
+        print("cloning")
+        guard shell("git", "clone", "https://github.com/ThumbWorks/DeckOfCards.git", .pathToGeneratedCode) == 0 else {
+            throw GenerationError.failedToClone
+        }
     }
 
     private func fetchGeneratedClient(client: Client, requestData: Data) -> EventLoopFuture<GenerationResponse>  {
@@ -103,6 +111,7 @@ final class GeneratedCodeFetchController {
         return client.post("https://\(String.generatorServiceHost)/api/generate") { serverRequest in
             serverRequest.http = outgoingRequest
         }.map { response -> GenerationResponse in
+            try self.cloneRepo()
             try response.http.body.data?.write(to: URL(fileURLWithPath: "\(String.pathToGeneratedCode)/client.zip"))
             try self.unzipPayload()
             try self.cleanupGeneratedCode()
