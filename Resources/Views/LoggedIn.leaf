@@ -26,9 +26,11 @@ fetch('/users/repos')
 
 
 <body onload="loadRepos()">
+
+
+
 <div class="container-fluid">
   <div class="row">
-
 
     <div class="col-sm-3" style="background-color:white;">
 
@@ -45,15 +47,23 @@ fetch('/users/repos')
     <h4> Add a trigger </h4>
 
       <form method="POST" action="/trigger/create" >
-        <label for="fname">SwaggerHub URL:</label><br>
-        <input type="text" id="swagger owner name" name="swaggerOwner" value="thumbworks"><br>
-        <input type="text" id="swagger spec name" name="swaggerSpecName" value="DeckOfCards"><br>
-        <input type="text" id="api version number" name="version" value="1.0.0"><br>
-        <div id="reposelector">
-          <select id="githubRepo" name="githubRepo"></select>
+        <div class="form-group">
+          <label for="fname">SwaggerHub URL:</label>
+          <input type="text" name="swaggerURL" id="" class="form-control" placeholder="https://app.swaggerhub.com/apis/Thumbworks/DeckOfCards/1.0.0#free" aria-describedby="helpId">
+          <small id="swagerURLID" class="text-muted">The URL in the browser when editing the yaml</small>
         </div>
-        <input type="submit" value="Submit">
+       
+        <div class="form-group">
+          <label for="">Version:</label>
+          <input type="text" name="version" id="version" class="form-control" placeholder="1.0.0" aria-describedby="helpId">
 
+        </div>
+        <div class="form-group">
+          <div id="reposelector">
+            <select id="githubRepo" name="githubRepo"></select>
+          </div>
+        </div>        
+        <button type="submit" class="btn btn-primary">Submit</button>
       </form>
 
     </div>
