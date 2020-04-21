@@ -13,7 +13,7 @@ import Vapor
 /// A single entry of a User list.
 final class User: PostgreSQLModel, Codable {
     /// The unique identifier for this `User`.
-    let githubAccessToken = "remove this column"
+    var githubAccessToken: String
     var id: Int?
     var name, location, blog, company, type, email, login, nodeID, gravatarID, gistsURLString, starredURLString, eventsURLString, followingURLString: String
     var avatarURL, receivedEventsURL, reposURL, url, htmlURL, subscriptionsURL, organizationsURL, followersURL: URL
@@ -28,7 +28,8 @@ final class User: PostgreSQLModel, Codable {
         return children(\.userID)
     }
 
-    func updateUser(with userResponse: UserResponse) {
+    func updateUser(with userResponse: UserResponse, accessToken: String) {
+        self.githubAccessToken = accessToken
         self.name = userResponse.name
         self.email = userResponse.email
         self.login = userResponse.login
@@ -68,7 +69,8 @@ final class User: PostgreSQLModel, Codable {
         self.plan = userResponse.plan
     }
 
-    init(userResponse: UserResponse) {
+    init(userResponse: UserResponse, accessToken: String) {
+        self.githubAccessToken = accessToken
         self.name = userResponse.name
         self.email = userResponse.email
         self.login = userResponse.login

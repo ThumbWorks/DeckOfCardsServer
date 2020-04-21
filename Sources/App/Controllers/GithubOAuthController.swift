@@ -156,10 +156,10 @@ final class GithubOAuthController {
             if let user = user {
                 // If yes, update
                 savableUser = user
-                savableUser.updateUser(with: userResponse)
+                savableUser.updateUser(with: userResponse, accessToken: accessToken)
             } else {
                 // If no, create
-                savableUser = User(userResponse: userResponse)
+                savableUser = User(userResponse: userResponse, accessToken: accessToken)
             }
 
             let session = try req.session()
