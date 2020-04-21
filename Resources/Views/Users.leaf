@@ -1,19 +1,72 @@
 
 <html>
   <head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
   </head>
   <body>
-    <p>
-      Well, hello there!
-    </p>
-    <p>
-      We're going to now talk to the GitHub API. Ready?
-      <a href="https://github.com/login/oauth/authorize?scope=user%20%20repo&client_id=#(GH_BASIC_CLIENT_ID)">Click here</a> to begin!</a>
-    </p>
-    <p>
-      If that link doesn't work, remember to provide your own <a href="/apps/building-oauth-apps/authorizing-oauth-apps/">Client ID</a>!
-    </p>
+    <div class="container">
+      <div class="row">
+        <div class="jumbotron">
+          <div class="container">
+            <h1 class="display-3">Swift Package Auto Generation</h1>
+            <p class="center">Boilerplate code as a service</p>
+            <hr class="my-2">
+            <p>More info</p>
+            <p class="lead">
+              <a class="btn btn-primary btn-lg" href="https://github.com/login/oauth/authorize?scope=user%20%20repo&client_id=#(GH_BASIC_CLIENT_ID)" role="button">Login</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="container">
+    
+      <h1>What is this?</h1>   
+    
+      <p>
+        Developing apps is hard. Creating boilerplate network API clients is time consuming.
+      Luckily we can leverage specific language features and open source technologies to 
+      automate some of the more boring work.
+      
+      </p>
+      <p>
+        Swift Package Auto Generation (SPAG) attempts to simplify the consumption of 
+        swift based web clients through automatic client code generation. Using
+          <a href="https://github.com/swagger-api/swagger-codegen">Swagger Codegen</a>
+          and <a href="https://swift.org/package-manager/">Swift Package Manager</a>
+          we're able to streamline the client generation.
+      </p>
+      
+      <h1>How does it work?</h1>   
+      <p>
+        <h3>Create your swaggerhub webhook</h3>
+        <ul>
+          <li>Login to <a href="https://swagger.io/tools/swaggerhub/">Swaggerhub</a></li>
+          <li>Create a new API. Either add your own valid yaml or use the demo PetStore API that SwaggerHub provides</li>
+          <li>go to the swagger file's settings</li>
+          <li>tap on integrations</li>
+          <li>tap on "Add new integrations"</li>
+          <li>Find webhook in the list</li>
+          <li>Name this integration something relevant: SPAG</li>
+          <li>Add <code>https://spag.com/webhook</code></li>
+          <li>Save the integration</li>
+        </ul>
+        <h3>Setup your SPAG</h3>
+        <ul>
+          <li> <a href="https://github.com/login/oauth/authorize?scope=user%20%20repo&client_id=#(GH_BASIC_CLIENT_ID)">Login</a> to SPAG</li>
+          <li>From your SPAG dashboard, select <b>Create new integration</b></li>
+          <li>Add your Swaggerhub username and repo</li>
+          <li>Create a new repo</li>
+          <li>In swaggerhub make a change to your repo</li>
+          <li>Save your changes</li>
+          <li>Check out your fully functional Swift Package in the repo you created above</li>
+        </ul>
+        
+        At this point you should be able to integrate your new swift package into Xcode or a `package.swift` file.
+         From here on out, your project will always have the latest version of your package. When you need to update 
+         your API, just update the yaml file in swaggerhub and save the file. In Xcode File -> Swift Packages -> Update Packages.
+      </p>
+
+    </div>
   </body>
 </html>
-Hello #(name)
-Hello, #(cool)!
