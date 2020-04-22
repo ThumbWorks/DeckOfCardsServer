@@ -107,9 +107,9 @@ final class GeneratedCodeFetchController {
     }
 
     private func fetchGeneratedClient(client: Client, requestData: Data) -> EventLoopFuture<GenerationResponse>  {
-        let outgoingRequest = buildHTTPRequest(with: requestData)
         return client.post("https://\(String.generatorServiceHost)/api/generate") { serverRequest in
-            serverRequest.http = outgoingRequest
+            serverRequest.http.contentType = MediaType.json
+            serverRequest.http.body = HTTPBody(data: requestData)
         }.map { response -> GenerationResponse in
             try self.cloneRepo()
             try response.http.body.data?.write(to: URL(fileURLWithPath: "\(String.pathToGeneratedCode)/client.zip"))
@@ -158,13 +158,6 @@ final class GeneratedCodeFetchController {
      **/
     private func parseRequestJson(rawRequestContent: ContentContainer<Request>) throws -> EventLoopFuture<WebhookRequest> {
         return try rawRequestContent.decode(WebhookRequest.self)
-    }
-
-    private func buildHTTPRequest(with requestData: Data) -> HTTPRequest {
-        var httpReq = HTTPRequest(method: .POST, url: "https://\(String.generatorServiceHost)/api/generate")
-        httpReq.contentType = MediaType.json
-        httpReq.body = HTTPBody(data: requestData)
-        return httpReq
     }
 
     func webhook(_ req: Request) throws -> EventLoopFuture<GenerationResponse> {

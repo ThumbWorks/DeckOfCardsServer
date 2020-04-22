@@ -136,9 +136,11 @@ final class GithubOAuthController {
     private func getGithubUser(with accessToken: String, on req: Request) throws -> EventLoopFuture<Response> {
         let client = try req.client()
 
+        let urlToPost = "https://api.\(String.githubHost)\(String.getUserPath)"
         // Create the request to fetch the user from github
-        let responseFuture = client.get("https://.....") { serverRequest in
-            serverRequest.http = buildGetUserRequest(with: accessToken)
+        let responseFuture = client.get(urlToPost) { serverRequest in
+            serverRequest.http.headers.add(name: .authorization, value: "token \(accessToken)")
+            serverRequest.http.headers.add(name: HTTPHeaderName.accept, value: "application/json")
         }
 
         // With the response do this
@@ -169,14 +171,6 @@ final class GithubOAuthController {
             try req.authenticateSession(savableUser)
             return savableUser.save(on: req).flatMap { try self.queryToken(user: $0, accessToken: accessToken, on: req) }
         }
-    }
-
-    private func buildGetUserRequest(with accessToken: String) -> HTTPRequest {
-        let urlToPost = "https://api.\(String.githubHost)\(String.getUserPath)"
-        var request =  HTTPRequest(method: .GET, url: urlToPost)
-        request.headers.add(name: .authorization, value: "token \(accessToken)")
-        request.headers.add(name: HTTPHeaderName.accept, value: "application/json")
-        return request
     }
 
     private func queryToken(user: User, accessToken: String, on req: Request) throws -> EventLoopFuture<Response> {
