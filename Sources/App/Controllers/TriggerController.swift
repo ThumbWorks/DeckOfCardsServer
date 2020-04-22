@@ -6,7 +6,7 @@
 //
 
 import Vapor
-
+import Fluent
 struct SubmitPayload: Content {
     var githubTeam: String
     var swaggerOwner: String
@@ -29,20 +29,11 @@ final class TriggerController {
         }
     }
 
-    func delete(_ req: Request) throws -> EventLoopFuture<Response> {
+    func delete(_ req: Request) throws -> EventLoopFuture<HTTPStatus> {
         let _ = try req.requireAuthenticated(User.self)
-        return try req.content.decode(DeletePayload.self).flatMap { payload in
-            return Trigger.find(payload.triggerID, on: req).flatMap { trigger in
-                if let trigger = trigger {
-                    return trigger.delete(on: req).map { _ in
-                        return req.redirect(to: "/")
-                    }
-                } else {
-                    return req.future(Response.self).map { _ in
-                        return req.redirect(to: "/")
-                    }
-                }
-            }
+
+        return try req.content.decode(Array<Int>.self).flatMap { payload in
+            return Trigger.query(on: req).filter(\Trigger.id ~~ payload).delete().transform(to: .ok)
         }
     }
 

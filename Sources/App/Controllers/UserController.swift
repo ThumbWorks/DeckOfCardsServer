@@ -46,8 +46,13 @@ final class UserController {
         return req.future(HTTPStatus.ok)
     }
 
-    func fetchGithubRepos(_ req: Request) throws -> Future<[RepoResponse]> {
+    func repos(_ req: Request) throws -> Future<[RepoResponse]> {
         let user = try req.requireAuthenticated(User.self)
         return try user.fetchRepos(req)
     }
+
+    func triggers(_ req: Request) throws -> Future<[Trigger]> {
+        return Trigger.query(on: req).all()
+    }
+
 }
