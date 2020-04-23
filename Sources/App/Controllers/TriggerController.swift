@@ -9,10 +9,7 @@ import Vapor
 import Fluent
 struct SubmitPayload: Content {
     var githubTeam: String
-    var swaggerOwner: String
     var swaggerSpecName: String
-    var version: String
-
 }
 struct DeletePayload: Content {
     var triggerID: Int

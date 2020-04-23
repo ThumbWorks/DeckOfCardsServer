@@ -1,5 +1,25 @@
 import Vapor
 
+
+struct Organization: Content {
+    let login: String
+    let id: Int
+    let nodeID: String
+    let url, reposURL, eventsURL, hooksURL, issuesURL, membersURL, publicMembersURL, avatarURL: String
+
+    enum CodingKeys: String, CodingKey {
+        case reposURL = "repos_url"
+        case eventsURL = "events_url"
+        case hooksURL = "hooks_url"
+        case issuesURL = "issues_url"
+        case membersURL = "members_url"
+        case publicMembersURL = "public_members_url"
+        case avatarURL = "avatar_url"
+        
+        case nodeID = "node_id"
+        case login, id, url
+    }
+}
 struct RepoResponse: Content {
     struct Permissions: Content {
         let admin: Bool
@@ -46,10 +66,15 @@ final class UserController {
         return req.future(HTTPStatus.ok)
     }
 
-    func repos(_ req: Request) throws -> Future<[RepoResponse]> {
+    func repos(_ req: Request) throws -> Future<[String]> {
         let user = try req.requireAuthenticated(User.self)
         return try user.fetchRepos(req)
     }
+
+    func orgs(_ req: Request) throws -> Future<[String]> {
+           let user = try req.requireAuthenticated(User.self)
+           return try user.fetchOrgs(req)
+       }
 
     func triggers(_ req: Request) throws -> Future<[Trigger]> {
         return Trigger.query(on: req).all()

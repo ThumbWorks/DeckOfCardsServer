@@ -30,22 +30,37 @@ function deleteTriggers() {
      })
 }
 
+function loadOrgs() {
+  fetch('/users/orgs')
+  .then((response) => {
+    return response.json();
+  })
+  .then((orgs) => {
+    for (i = 0; i < orgs.length; i++) {
+      var org = orgs[i]
+      var selector = document.getElementById("githubOrg");
+      var option = document.createElement("OPTION");
+      option.value = org
+      option.text = org
+      selector.add(option)
+    }
+  });
+}
 function loadRepos() {
-
-fetch('/users/repos')
-.then((response) => {
-  return response.json();
-})
-.then((repos) => {
-  for (i = 0; i < repos.length; i++) {
-    var repo = repos[i]
-    var selector = document.getElementById("githubRepo");
-    var option = document.createElement("OPTION");
-    option.value = repo.name
-    option.text = repo.name
-    selector.add(option)
-  }
-});
+  fetch('/users/repos')
+  .then((response) => {
+    return response.json();
+  })
+  .then((repos) => {
+    for (i = 0; i < repos.length; i++) {
+      var repo = repos[i]
+      var selector = document.getElementById("githubRepo");
+      var option = document.createElement("OPTION");
+      option.value = repo
+      option.text = repo
+      selector.add(option)
+    }
+  });
 }
 
 
@@ -82,7 +97,7 @@ fetch('/users/triggers')
 </script>
 
 
-<body onload="loadRepos();loadTriggers()">
+<body onload="loadRepos();loadTriggers(); loadOrgs()">
 
 <div class="container-fluid">
   <div class="row">
@@ -103,15 +118,21 @@ fetch('/users/triggers')
 
       <form method="POST" action="/trigger/create" >
         <div class="form-group">
-          <label for="fname">SwaggerHub URL:</label>
-          <input type="text" name="swaggerURL" id="" class="form-control" placeholder="https://app.swaggerhub.com/apis/Thumbworks/DeckOfCards/1.0.0#free" aria-describedby="helpId">
+          <label for="">SwaggerHub URL:</label>
+          <input type="text" name="swaggerURL" id="" class="form-control" placeholder="https://app.swaggerhub.com/apis/Thumbworks/DeckOfCards/1.0.0" aria-describedby="helpId">
           <small id="swagerURLID" class="text-muted">The URL in the browser when editing the yaml</small>
         </div>
-       
-        <div class="form-group">
-          <label for="">Version:</label>
-          <input type="text" name="version" id="version" class="form-control" placeholder="1.0.0" aria-describedby="helpId">
 
+        <div class="form-group">
+          <label for="">Github Team</label>
+          <input type="text" name="" id="" class="form-control" placeholder="" aria-describedby="helpId">
+          <small id="helpId" class="text-muted">Github Team Name</small>
+        </div>
+        
+        <div class="form-group">
+          <label for="sel1">Select Org:</label>
+          <select class="form-control" id="githubOrg">
+          </select>
         </div>
 
         <div class="form-group">

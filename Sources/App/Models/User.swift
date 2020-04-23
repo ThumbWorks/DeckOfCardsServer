@@ -129,27 +129,35 @@ extension User: Parameter { }
 extension User: SessionAuthenticatable { }
 
 extension User {
-    func fetchRepos(_ req: Request) throws -> Future<[RepoResponse]> {
-           let user = try req.requireAuthenticated(User.self)
-           let repoURL = user.reposURL
-           let client = try req.client()
-           // Create the request to fetch the user from github
-           let responseFuture = client.get(repoURL) { serverRequest in
-               if let token = try req.session()[.githubToken] {
-                   serverRequest.http = buildGetRepoRequest(with: repoURL.absoluteString, accessToken: token)
-               }
-        }
-        return responseFuture.flatMap { try $0.content.decode([RepoResponse].self).map { response  in
-            return response
+    func fetchRepos(_ req: Request) throws -> Future<[String]> {
+        let user = try req.requireAuthenticated(User.self)
+        let repoURL = user.reposURL
+        let client = try req.client()
+        // Create the request to fetch the user from github
+        return client.get(repoURL) { serverRequest in
+            if let token = try req.session()[.githubToken] {
+                serverRequest.http.headers.add(name: .authorization, value: "token \(token)")
+                serverRequest.http.headers.add(name: HTTPHeaderName.accept, value: "application/json")
+            }
+        }.flatMap { try $0.content.decode([RepoResponse].self).map { $0.map { $0.name }}}
+    }
+    
+    func fetchOrgs(_ req: Request) throws -> Future<[String]> {
+        let user = try req.requireAuthenticated(User.self)
+        let client = try req.client()
+        print(user.organizationsURL)
+        let url = "https://api.github.com/user/orgs"
+        // Create the request to fetch the user from github
+        return client.get(url) { serverRequest in
+            if let token = try req.session()[.githubToken] {
+                serverRequest.http.headers.add(name: .authorization, value: "token \(token)")
+                serverRequest.http.headers.add(name: HTTPHeaderName.accept, value: "application/json")
+            }
+        }.flatMap { try $0.content.decode([Organization].self).map { orgs -> [String] in
+            var orgs =  orgs.map { $0.login }
+            orgs.append(user.login)
+            return orgs
             }
         }
     }
-
-    private func buildGetRepoRequest(with path: String, accessToken: String) -> HTTPRequest {
-             var request =  HTTPRequest(method: .GET, url: path)
-             request.headers.add(name: .authorization, value: "token \(accessToken)")
-
-             request.headers.add(name: HTTPHeaderName.accept, value: "application/json")
-             return request
-         }
 }
