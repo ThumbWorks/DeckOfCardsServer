@@ -5,6 +5,7 @@
 <script type="text/javascript">
 
 
+
 function deleteTriggers() {
   var checks = document.getElementsByName("deletionCheckbox")
   var deleteIDs = new Array()
@@ -21,11 +22,17 @@ function deleteTriggers() {
       headers:{'content-type': 'application/json'},
       body:  JSON.stringify(deleteIDs)})
     .then( (response) => {
-      return response.json();
+      return response;
     })
      .then( (data) => {
-       //TODO remove the table and load them again
-      location.reload()
+      for (var i = 0; i < checks.length; i++) {
+        var check = checks[i]
+        if (check.checked) {
+          var triggerIDName = "trigger-"+check.id
+          let rowToDelete = document.getElementById(triggerIDName)
+          rowToDelete.parentNode.removeChild(rowToDelete);
+        }
+  }
        //console.log(data); // JSON data parsed by `response.json()` call
      })
 }
@@ -76,12 +83,13 @@ fetch('/users/triggers')
     var table = document.getElementById("triggertable");
 
     var row = document.createElement("TR");
+    // a name for looking up the thing we will delete from the table later
+    row.id = "trigger-"+trigger.id 
+
     table.appendChild(row);
     row.insertCell(0).innerHTML = trigger.swaggerRepo
     row.insertCell(1).innerHTML = trigger.gitRepo
-    // row[0].innerHTML.alignContent = "center"
-    // row[1].innerHTML.alignContent = "center"
-
+    
     var checkbox = document.createElement("INPUT");
     checkbox.setAttribute("type", "checkbox");
     checkbox.id = trigger.id
