@@ -22,6 +22,7 @@ extension String {
     static let pathToClonedCode = "/tmp/generatedCodeClone"
     static let generatorServiceHost = "generator3.swagger.io"
 
+    static let removeDirCommand = "rmdir"
     static let removeCommand = "rm"
     static let copyCommand = "cp"
     static let recursive = "-r"

@@ -12,12 +12,16 @@ struct GenerationResponse: Content {
 }
 
 enum GenerationError: Error {
+    case failedToGenerateURL
     case failedToCreateDirectory
     case failedToGenerateClientCode
     case failedToMoveGeneratedCode
     case failedToUnzip
     case failedToRemoveArtifacts(String)
     case failedToClone
+    case failedToGitAdd
+    case failedToGitCommit
+    case failedToGitPush
 
     var localizedDescription: String {
         switch self {
@@ -33,6 +37,14 @@ enum GenerationError: Error {
             return "Failed to remove code gen build artifacts. \(file)"
         case .failedToUnzip:
             return "Failed to unzip the payload"
+        case .failedToGenerateURL:
+            return "Failed to generate URL from payload"
+        case .failedToGitAdd:
+            return "Failed to perform git add"
+        case .failedToGitCommit:
+            return "Failed to perform git commit"
+        case .failedToGitPush:
+            return "Failed to perform git push origin master"
         }
     }
 }
@@ -59,12 +71,12 @@ extension WebhookRequest {
 
 final class GeneratedCodeFetchController {
     
-    private func shell(_ args: String...) -> Int32 {
+    private func shell(_ args: String...) throws -> Int32 {
+        print(args)
         let task = Process()
-        // print(task.currentDirectoryPath)
         task.launchPath = "/usr/bin/env"
         task.arguments = args
-        task.launch()
+        try task.run()
         if let error = task.standardError {
             print(error)
         }
@@ -72,52 +84,68 @@ final class GeneratedCodeFetchController {
         return task.terminationStatus
     }
     private func unzipPayload() throws {
-        guard shell("unzip", "-o", "\(String.pathToGeneratedCode)/client.zip", "-d", "\(String.pathToGeneratedCode)/client/") == 0 else {
+        guard try shell("unzip", "-o", "\(String.pathToGeneratedCode)/client.zip", "-d", "\(String.pathToGeneratedCode)/client/") == 0 else {
             throw GenerationError.failedToUnzip
         }
     }
     /// mv /tmp/generatedCode/SwaggerClient/Classes/Swaggers/* /tmp/generatedCode/
-    private func cleanupGeneratedCode() throws {
+    private func rearrangeSwaggerOutputToSwiftPackageFormat() throws {
         // This is all very swift-client specific instructions
-        guard shell(.copyCommand, .recursive, "\(String.pathToGeneratedCode)/client/SwaggerClient/Classes/Swaggers/", "\(String.pathToGeneratedCode)/Sources/DeckOfCards") == 0 else {
+        guard try shell(.copyCommand, .recursive, "\(String.pathToGeneratedCode)/client/SwaggerClient/Classes/Swaggers/", "\(String.pathToGeneratedCode)/Sources/DeckOfCards") == 0 else {
             throw GenerationError.failedToMoveGeneratedCode
         }
-        guard shell(.removeCommand, .recursive, "\(String.pathToGeneratedCode)/client/SwaggerClient/") == 0 else {
+        guard try shell(.removeCommand, .recursive, "\(String.pathToGeneratedCode)/client/SwaggerClient/") == 0 else {
             throw GenerationError.failedToRemoveArtifacts("Swagger Client directory")
         }
-        guard shell(.removeCommand, "\(String.pathToGeneratedCode)/client/SwaggerClient.podspec") == 0 else {
+        guard try shell(.removeCommand, "\(String.pathToGeneratedCode)/client/SwaggerClient.podspec") == 0 else {
             throw GenerationError.failedToRemoveArtifacts("Pod spec file")
         }
-        guard shell(.removeCommand, "\(String.pathToGeneratedCode)/client.zip") == 0 else {
+        guard try shell(.removeCommand, "\(String.pathToGeneratedCode)/client.zip") == 0 else {
             throw GenerationError.failedToRemoveArtifacts("downloaded zip file")
         }
-        guard shell(.removeCommand, "\(String.pathToGeneratedCode)/client/git_push.sh") == 0 else {
+        guard try shell(.removeCommand, "\(String.pathToGeneratedCode)/client/git_push.sh") == 0 else {
             throw GenerationError.failedToRemoveArtifacts("git push shell script")
         }
-        guard shell(.removeCommand, "\(String.pathToGeneratedCode)/client/Cartfile") == 0 else {
+        guard try shell(.removeCommand, "\(String.pathToGeneratedCode)/client/Cartfile") == 0 else {
             throw GenerationError.failedToRemoveArtifacts("Cart file")
+        }
+        guard try shell(.removeCommand, "\(String.pathToGeneratedCode)/client/.gitignore") == 0 else {
+            throw GenerationError.failedToRemoveArtifacts("gitignore")
+        }
+        guard try shell(.removeCommand, "\(String.pathToGeneratedCode)/client/.swagger-codegen-ignore") == 0 else {
+            throw GenerationError.failedToRemoveArtifacts("swagger-codegen-ignore")
+        }
+        guard try shell(.removeCommand, "\(String.pathToGeneratedCode)/client/.swagger-codegen/Version") == 0 else {
+            throw GenerationError.failedToRemoveArtifacts(".swagger-codegen/Version")
+        }
+        guard try shell(.removeDirCommand, "\(String.pathToGeneratedCode)/client/.swagger-codegen/") == 0 else {
+            throw GenerationError.failedToRemoveArtifacts(".swagger-codegen directory")
+        }
+        guard try shell(.removeDirCommand, "\(String.pathToGeneratedCode)/client/") == 0 else {
+            throw GenerationError.failedToRemoveArtifacts("Client dir")
         }
     }
 
-    private func cloneRepo() throws {
-        print("cloning")
-        guard shell("git", "clone", "https://github.com/ThumbWorks/DeckOfCards.git", .pathToGeneratedCode) == 0 else {
+    /// remove all artifacts from the generation and swift pacakge formatting.
+    private func removeSwiftPackageFormattedCode() throws {
+        // This is all very swift-client specific instructions
+
+        guard try shell(.removeCommand, "-rf", "\(String.pathToGeneratedCode)") == 0 else {
+            throw GenerationError.failedToRemoveArtifacts("Generated Code Dir")
+        }
+    }
+
+    private func cloneRepo(repoURL: URL) throws {
+        // TODO need to parameterize this
+        guard try shell("git", "clone", repoURL.absoluteString, .pathToGeneratedCode) == 0 else {
             throw GenerationError.failedToClone
         }
     }
 
-    private func fetchGeneratedClient(client: Client, requestData: Data) -> EventLoopFuture<GenerationResponse>  {
+    private func fetchGeneratedClient(client: Client, requestData: Data) -> EventLoopFuture<Response>  {
         return client.post("https://\(String.generatorServiceHost)/api/generate") { serverRequest in
             serverRequest.http.contentType = MediaType.json
             serverRequest.http.body = HTTPBody(data: requestData)
-        }.map { response -> GenerationResponse in
-            try self.cloneRepo()
-            try response.http.body.data?.write(to: URL(fileURLWithPath: "\(String.pathToGeneratedCode)/client.zip"))
-            try self.unzipPayload()
-            try self.cleanupGeneratedCode()
-            // TODO Add the github integration here
-            // 1. Look up the user's configuration
-            return GenerationResponse(localizedString: "Successfully built client!")
         }
     }
 
@@ -130,9 +158,15 @@ final class GeneratedCodeFetchController {
            ]
         return try JSONSerialization.data(withJSONObject: bodyDict, options: .prettyPrinted)
     }
-    
+
+    private func removeCodeDirectory() throws {
+        guard try shell("rmdir", String.pathToGeneratedCode) == 0 else {
+            throw GenerationError.failedToRemoveArtifacts("Stale Directory")
+        }
+    }
+
     private func makeCodeDirectory() throws {
-        guard shell("mkdir", String.pathToGeneratedCode) == 1  else {
+        guard try shell("mkdir", String.pathToGeneratedCode) == 0  else {
             throw GenerationError.failedToCreateDirectory
         }
     }
@@ -160,10 +194,36 @@ final class GeneratedCodeFetchController {
         return try rawRequestContent.decode(WebhookRequest.self)
     }
 
+    func gitAddChanges() throws {
+        guard try shell("git", "-C", String.pathToGeneratedCode, "add", ".") == 0 else {
+            throw GenerationError.failedToGitAdd
+        }
+    }
+
+    func gitCommitChanges() throws {
+        guard try shell("git", "-C", String.pathToGeneratedCode, "commit", "-m", "Updated api") == 0 else {
+            throw GenerationError.failedToGitCommit
+        }
+    }
+
+    func gitPushChanges() throws {
+        guard try shell("git", "-C", String.pathToGeneratedCode, "push",  "origin", "master") == 0 else {
+            throw GenerationError.failedToGitPush
+        }
+    }
+
     func webhook(_ req: Request) throws -> EventLoopFuture<GenerationResponse> {
         return try req.content.decode(WebhookRequest.self).flatMap({ request -> EventLoopFuture<GenerationResponse> in
+            print("request \(request)")
             // Step 1: Make the tmp directory and fail silently
-            try? self.makeCodeDirectory()
+            try? self.removeSwiftPackageFormattedCode()
+            let username = "rodericj"
+            let token = "checkDatabase"
+            guard let url = URL(string: "https://\(username):\(token)@github.com/ThumbWorks/DeckOfCards.git") else {
+                throw GenerationError.failedToGenerateURL
+            }
+            try self.cloneRepo(repoURL: url)
+
             let repo = try request.repo()
             let owner = try request.owner()
             let version = try request.version()
@@ -171,6 +231,17 @@ final class GeneratedCodeFetchController {
             let client = try req.client()
             let requestData = try self.buildJSONPayload(specURLString: specURLString)
             return self.fetchGeneratedClient(client: client, requestData: requestData)
+                .map { response -> GenerationResponse in
+                    try response.http.body.data?.write(to: URL(fileURLWithPath: "\(String.pathToGeneratedCode)/client.zip"))
+                    try self.unzipPayload()
+                    try self.rearrangeSwaggerOutputToSwiftPackageFormat()
+                    try self.gitAddChanges()
+                    try self.gitCommitChanges()
+                    try self.gitPushChanges()
+                    // TODO Add the github integration from the database here
+                    // 1. Look up the user's configuration
+                    return GenerationResponse(localizedString: "Successfully built client!")
+            }
         })
     }
 }
